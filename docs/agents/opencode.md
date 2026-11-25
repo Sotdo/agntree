@@ -16,7 +16,6 @@ Agntree gives opencode a session manager inside VS Code. Every opencode session 
 | Fork, here or into a new worktree | Yes, with opencode's own fork |
 | Working and finished marks, finished-turn notifications | Yes |
 | "Needs your input" notifications | Not available. opencode exposes no pending-permission state |
-| Find Session | Its sessions are searched. opencode cannot run the search |
 | Open in the agent's VS Code panel | No. Sessions open in a terminal |
 
 ## Run opencode sessions in parallel
@@ -50,11 +49,8 @@ opencode keeps its sessions in a database. Agntree never opens that database; it
 ## Good to know
 
 - **The tooltip loads on hover.** Reading a session's last exchange needs an export, so Agntree fetches it for the row under your cursor instead of for every row.
-- **Find Session coverage.** Each search reads opencode's newest 200 top-level sessions through its CLI. Older, archived, and subagent sessions are not searched.
-- **Running Find Session needs another agent.** opencode has no read-only mode that Agntree can enforce, so Claude Code, Codex, or Pi runs the search. Your opencode sessions are still included.
 
 ## Related
 
 - [Sessions](../sessions.md)
 - [Fork a session](../fork-sessions.md)
-- [Find Session](../find-session.md)

@@ -66,7 +66,7 @@ You do not have to start a session from the sidebar for it to appear there. Agnt
 
 Imported sessions carry the agent's own name for them: Claude Code's session title, Codex's thread name, opencode's title, or Pi's session name.
 
-To add an older session by hand, right-click a worktree or folder and choose **Import Existing Sessions…**, then tick the ones you want. To look for a session in any folder on your machine, use [Find Session](find-session.md).
+To add an older session by hand, right-click a worktree or folder and choose **Import Existing Sessions…**, then tick the ones you want.
 
 Turn automatic import off with [`agntree.autoImport.enabled`](reference/settings.md#sessions). Sessions you start from Agntree are still listed, and rows then stop [aging out](#rows-age-out-by-themselves).
 
@@ -100,6 +100,5 @@ Right-click a session and choose **Copy Session ID** for the agent's native ID, 
 ## Related
 
 - [Fork a session](fork-sessions.md)
-- [Find Session](find-session.md)
 - [Notifications](notifications.md)
 - [Commands on a session row](reference/commands.md#session-rows)

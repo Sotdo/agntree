@@ -96,13 +96,6 @@ export const sections = [
           'Fork a coding-agent conversation with its full history, in the same worktree or into a new git worktree that carries your uncommitted changes.',
       },
       {
-        file: 'find-session.md',
-        nav: 'Find Session',
-        title: 'Find a past coding-agent session by describing it',
-        description:
-          'Describe what you worked on and Agntree has an agent search your Claude Code, Codex, opencode, and Pi history in every folder, then resume the match.',
-      },
-      {
         file: 'notifications.md',
         nav: 'Notifications',
         title: 'Know when a coding agent finishes or needs you',
@@ -185,7 +178,7 @@ export const sections = [
         nav: 'Settings',
         title: 'Agntree settings reference',
         description:
-          'Every Agntree setting with its default: default agent, where sessions open, auto-import and retention, notifications, Find Session, and agent commands.',
+          'Every Agntree setting with its default: default agent, where sessions open, auto-import and retention, notifications, and agent commands.',
       },
       {
         file: 'reference/commands.md',
@@ -199,7 +192,7 @@ export const sections = [
         nav: 'Keyboard shortcuts',
         title: 'Agntree keyboard shortcuts',
         description:
-          'Default Agntree keyboard shortcuts on Windows, Linux, and macOS: new session, next session that needs you, Find Session, starred sessions, and tree keys.',
+          'Default Agntree keyboard shortcuts on Windows, Linux, and macOS: new session, next session that needs you, starred sessions, and tree keys.',
       },
     ],
   },

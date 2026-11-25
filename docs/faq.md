@@ -34,13 +34,13 @@ Yes. Agntree is free and open source under the MIT license, with no paid tier an
 
 ### Does Agntree send my code or conversations anywhere?
 
-No. Agntree has no telemetry and keeps its state inside VS Code. The one exception is **Find Session**, which runs only when you ask a question: the agent you choose reads your session history and sends what it reads to its model provider, as any session with that agent does. See [Privacy](privacy.md).
+No. Agntree has no telemetry and keeps its state inside VS Code. It never sends your code or conversations anywhere; the agents themselves talk to their model providers as they always do. See [Privacy](privacy.md).
 
 ## Sessions
 
 ### How do I find an old Claude Code session?
 
-Use **Find Session** (`Ctrl+Alt+F`, `Ctrl+Cmd+F` on macOS) and describe what you did, for example "the one where we fixed the flaky cart test". An agent searches your Claude Code, Codex, opencode, and Pi sessions in every folder and lists the matches. If you know which folder it was in, right-click that worktree and choose **Import Existing Sessions…**. See [Find Session](find-session.md).
+Add the folder to Agntree if it is not already there, then right-click its worktree and choose **Import Existing Sessions…**. See [Sessions](sessions.md).
 
 ### Can I fork a Claude Code or Codex conversation?
 
@@ -118,7 +118,7 @@ No. Agntree sends nothing to its author or to any third party.
 
 ### Does Agntree use my tokens or cost money to run?
 
-Almost never. Listing, naming, resuming, and watching sessions read local files or ask the agent's CLI for a list; no model is called. The exception is **Find Session**, which runs an agent on your account when you ask a question.
+No. Listing, naming, resuming, and watching sessions read local files or ask the agent's CLI for a list; no model is called.
 
 ### Does Agntree change my agent's configuration?
 
@@ -126,4 +126,4 @@ No. Agntree installs no hooks and edits no agent settings. It reads each agent's
 
 ### Where does Agntree keep its data?
 
-In VS Code's own extension storage on your machine: the folders you added, the session list, stars, and your last ten Find Session searches. The conversations themselves stay in each agent's storage.
+In VS Code's own extension storage on your machine: the folders you added, the session list, and your stars. The conversations themselves stay in each agent's storage.

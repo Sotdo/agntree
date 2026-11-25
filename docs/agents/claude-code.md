@@ -17,7 +17,6 @@ Agntree gives Claude Code a session manager inside VS Code. Every Claude Code se
 | Fork, here or into a new worktree | Yes, with Claude Code's own `--fork-session` |
 | Working and finished marks, finished-turn notifications | Yes |
 | "Needs your input" notifications | Yes, for permission prompts and questions |
-| Find Session | Searched, and can run the search |
 | Open in the agent's VS Code panel | Yes, the Claude Code extension |
 
 ## Run Claude Code sessions in parallel
@@ -33,8 +32,6 @@ Each session now has its own branch and directory, and the sidebar shows which a
 ## Resume a Claude Code session
 
 Click the session. Agntree runs `claude --resume <session-id>` in the session's worktree. To do the same by hand, right-click the session and choose **Copy Resume Command**.
-
-To find a session you cannot place, use [Find Session](../find-session.md) and describe what you did in it.
 
 ## Know when Claude Code needs you
 
@@ -56,7 +53,6 @@ A Claude Code session can move between its terminal and the Claude Code extensio
 | Resume | `claude --resume <session-id>` |
 | Fork | `claude --resume <source-id> --fork-session --session-id <new-uuid>` |
 | Sessions waiting on you | `claude agents --json` |
-| Find Session | `claude --print` with only the `Read`, `Grep`, and `Glob` tools, no MCP servers, and no saved session |
 
 Agntree chooses the session ID before it starts Claude Code, so a row is always linked to exactly the session it launched, even with several new sessions in one worktree.
 

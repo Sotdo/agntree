@@ -77,14 +77,6 @@ Try a second approach without giving up the first. A fork keeps the whole conver
 
 [Fork a session →](https://subhashkhileri.github.io/agntree/docs/fork-sessions/)
 
-### Find any session by describing it
-
-Type "the one where we fixed the flaky cart test". Find Session has an agent search your history across every agent and every folder on your machine, then checks each match against the agent's own records before showing it. The searching agent gets read-only tools, and there is no index to build.
-
-![Describing a past session in Find Session, and resuming the Codex session it finds](media/demo-find.gif)
-
-[Find Session →](https://subhashkhileri.github.io/agntree/docs/find-session/)
-
 ### Know which agent needs you
 
 Agntree notifies you when a turn finishes, and for Claude Code, when it is waiting on a permission prompt or a question. `Ctrl+Alt+N` (`Ctrl+Cmd+N` on macOS) jumps to the session that has waited longest.
@@ -113,12 +105,12 @@ Open a session in its terminal, or hand it to the Claude Code or Codex extension
 
 ## Supported agents
 
-| Agent | Start and resume | Fork | Auto-import | Find Session | Notifications | VS Code panel |
-| --- | :-: | :-: | :-: | :-: | --- | --- |
-| [Claude Code](https://subhashkhileri.github.io/agntree/docs/agents/claude-code/) | ✓ | ✓ | ✓ | ✓ | Finished turns and "needs input" | ✓ |
-| [Codex](https://subhashkhileri.github.io/agntree/docs/agents/codex/) | ✓ | ✓ | ✓ | ✓ | Finished turns | ✓ |
-| [opencode](https://subhashkhileri.github.io/agntree/docs/agents/opencode/) | ✓ | ✓ | ✓ | Searched | Finished turns | Terminal only |
-| [Pi](https://subhashkhileri.github.io/agntree/docs/agents/pi/) | ✓ | ✓ | ✓ | ✓ | Finished turns | Terminal only |
+| Agent | Start and resume | Fork | Auto-import | Notifications | VS Code panel |
+| --- | :-: | :-: | :-: | :-: | --- |
+| [Claude Code](https://subhashkhileri.github.io/agntree/docs/agents/claude-code/) | ✓ | ✓ | ✓ | Finished turns and "needs input" | ✓ |
+| [Codex](https://subhashkhileri.github.io/agntree/docs/agents/codex/) | ✓ | ✓ | ✓ | Finished turns | ✓ |
+| [opencode](https://subhashkhileri.github.io/agntree/docs/agents/opencode/) | ✓ | ✓ | ✓ | Finished turns | Terminal only |
+| [Pi](https://subhashkhileri.github.io/agntree/docs/agents/pi/) | ✓ | ✓ | ✓ | Finished turns | Terminal only |
 
 Claude Code needs version 2.1.310 or newer, and opencode version 2 or newer. Mix agents freely: a Claude Code session and a Codex session can sit under the same branch.
 
@@ -131,7 +123,7 @@ Each agent keeps its own sessions. Agntree reads them through the interface that
 | Resume a session | Find the ID, `cd` to its directory, run `claude --resume <id>`, `codex resume <id>`, `opencode --session <id>`, or `pi --session <id>` | Click the session |
 | Start an agent on a new branch | `git worktree add`, `cd`, start the CLI, remember which terminal it is | **Create Worktree…**, then **+** |
 | Try a second approach | Learn each agent's fork flags and where the copy lands | **Fork Session Here** |
-| Find last week's session | Grep transcripts, or scroll a picker in every directory | Describe it in **Find Session** |
+| Find last week's session | Grep transcripts, or scroll a picker in every directory | Import existing sessions under their worktree |
 | Notice an agent is waiting | Look at each terminal in turn | A notification, or `Ctrl+Alt+N` |
 | Review the agent's edits | `git status` and `git diff`, again and again | The **Changes** panel |
 | Work on a pull request | Fetch the branch, add a worktree, `cd`, start the CLI | **Check Out Pull Request…** |
@@ -144,7 +136,6 @@ Standalone apps such as Orca and Paseo run agents in a separate desktop app. Agn
 | --- | --- | --- |
 | `Ctrl+Alt+Enter` | `Ctrl+Cmd+Enter` | New session with your default agent, in the current worktree |
 | `Ctrl+Alt+N` | `Ctrl+Cmd+N` | Go to the next session that needs you |
-| `Ctrl+Alt+F` | `Ctrl+Cmd+F` | Find Session… |
 | `Ctrl+Alt+S` | `Ctrl+Cmd+S` | Starred Sessions… |
 | `Ctrl+Alt+A` | `Ctrl+Cmd+A` | Show the Agntree sidebar |
 
@@ -159,7 +150,7 @@ Yes. Agntree is MIT licensed and free. You pay only what your agents already cos
 Yes. It works in VS Code 1.93 or newer and in editors built on it, such as Cursor. If your editor's extension search does not list Agntree, install the `.vsix` from the [latest release](https://github.com/subhashkhileri/agntree/releases/latest).
 
 **Does Agntree send my code or sessions anywhere?**
-No. Agntree makes no network requests of its own and collects no telemetry. Find Session is the one feature that sends session text to a model, through the agent you choose, and only when you ask it a question. See [privacy](https://subhashkhileri.github.io/agntree/docs/privacy/).
+No. Agntree makes no network requests of its own and collects no telemetry. The agents themselves talk to their model providers as they always do. See [privacy](https://subhashkhileri.github.io/agntree/docs/privacy/).
 
 **What happens to my sessions if I uninstall it?**
 Nothing. Sessions stay in each agent's own storage with their own IDs.
@@ -172,7 +163,7 @@ More in the [full FAQ](https://subhashkhileri.github.io/agntree/docs/faq/) and [
 ## Documentation
 
 - [Getting started](https://subhashkhileri.github.io/agntree/docs/getting-started/)
-- Features: [sessions](https://subhashkhileri.github.io/agntree/docs/sessions/), [worktrees](https://subhashkhileri.github.io/agntree/docs/worktrees/), [forking](https://subhashkhileri.github.io/agntree/docs/fork-sessions/), [Find Session](https://subhashkhileri.github.io/agntree/docs/find-session/), [notifications](https://subhashkhileri.github.io/agntree/docs/notifications/), [agent panels](https://subhashkhileri.github.io/agntree/docs/agent-panels/), [changes and files](https://subhashkhileri.github.io/agntree/docs/changes-and-files/)
+- Features: [sessions](https://subhashkhileri.github.io/agntree/docs/sessions/), [worktrees](https://subhashkhileri.github.io/agntree/docs/worktrees/), [forking](https://subhashkhileri.github.io/agntree/docs/fork-sessions/), [notifications](https://subhashkhileri.github.io/agntree/docs/notifications/), [agent panels](https://subhashkhileri.github.io/agntree/docs/agent-panels/), [changes and files](https://subhashkhileri.github.io/agntree/docs/changes-and-files/)
 - Guides: [run agents in parallel with git worktrees](https://subhashkhileri.github.io/agntree/docs/guides/parallel-agents-git-worktrees/), [resume a session](https://subhashkhileri.github.io/agntree/docs/guides/resume-a-session/)
 - Reference: [settings](https://subhashkhileri.github.io/agntree/docs/reference/settings/), [commands](https://subhashkhileri.github.io/agntree/docs/reference/commands/), [keyboard shortcuts](https://subhashkhileri.github.io/agntree/docs/reference/keyboard-shortcuts/)
 

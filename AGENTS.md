@@ -216,13 +216,6 @@ watcher, a command and menu entries, icons, tests, and documentation.
   `agntree.<harness>Installed` context key for every registered adapter.
 - A base mark in `resources/icons/harness/base/`, registration in
   `scripts/generate-harness-icons.mjs`, and generated light/dark × state files.
-- For Find Session, optionally `sessionSearch` (search instructions, readable directories,
-  `verify()` against the harness's own record, and `prepare()` when the records are not
-  files) and `sessionSearchRunner` (a headless, read-only conversation that answers in
-  text and takes follow-up messages, plus its default model and effort levels and a probe
-  for whether its CLI is available; add the id to the `agntree.sessionSearch.harness`
-  enum). Shared code needs no edit; see
-  `ARCHITECTURE.md` → Find Session and [ADR 0016](adr/0016-find-session-sources-across-harnesses.md).
 - Adapter, service/watcher, menu, icon, and integration tests as applicable. Commands are
   harness-agnostic, so they need no per-harness test.
 - A `docs/agents/<harness>.md` page listed in `site/pages.mjs`, the agent tables in
@@ -238,7 +231,6 @@ watcher, a command and menu entries, icons, tests, and documentation.
 | Fork | `--resume <source> --fork-session --session-id <new>` | Native fork, then move into a new worktree | `thread/fork` into the destination `cwd` | `--fork <source> --session-id <new>` into the destination `cwd` |
 | Live turn state | Transcript tail: `stop_reason` + `turn_duration`; `agents --json` supplies waiting | `time.idle` vs `time.updated` | Rollout `task_started` / `task_complete` / `turn_aborted` | Session tail: last user/tool-result or `toolUse` means working; a terminal assistant `stopReason` means done |
 | Previews | Transcript parse | Lazy `session export`, cached | `thread/items/list` | Transcript parse |
-| Find Session | Source: transcripts read with Read/Grep/Glob; runner: `claude --print` with an empty strict MCP config, read-only | Source: a short-lived snapshot made with `opencode api session.list` + `session.message.list`; no read-only runner | Source: rollouts read with Read/Grep/Glob; runner: ephemeral `codex exec` with the user's config and MCP servers disabled per run | Source: JSONL records read with Read/Grep/Glob; runner: `pi --print` with `read,grep,find,ls` and MCP tools denied |
 
 The pattern behind the table: use the native lifecycle where one exists, fall back to a
 watcher or a tailed log only for the gaps the tool does not expose, and put the fallback in

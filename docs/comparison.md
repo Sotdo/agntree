@@ -57,7 +57,7 @@ Everything Agntree does can be done by hand. The difference is the bookkeeping.
 | Resume a session | Find the ID, `cd` to its directory, run `claude --resume <id>`, `codex resume <id>`, `opencode --session <id>`, or `pi --session <id>` | Click the session |
 | Start an agent on a new branch | `git worktree add`, `cd`, start the CLI, remember which terminal it is | **Create Worktree…**, then **+** |
 | Try a second approach | Learn each agent's fork flags and where the copy lands | **Fork Session Here** |
-| Find last week's session | Grep transcripts, or scroll a picker in every directory | Describe it in **Find Session** |
+| Find last week's session | Grep transcripts, or scroll a picker in every directory | Import existing sessions under their worktree |
 | Notice an agent is waiting | Look at each terminal in turn | A notification, or `Ctrl+Alt+N` |
 | Review the agent's edits | `git status` and `git diff`, again and again | The **Changes** panel |
 | Work on a pull request | Fetch the branch, add a worktree, `cd`, start the CLI | **Check Out Pull Request…** |

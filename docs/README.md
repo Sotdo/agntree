@@ -12,7 +12,6 @@ New here? [Install Agntree and start your first session](getting-started.md). It
 | Start, resume, rename, star, and clean up sessions | [Sessions](sessions.md) |
 | Give each task its own branch and directory | [Worktrees and repositories](worktrees.md) |
 | Try a second approach without losing the first | [Fork a session](fork-sessions.md) |
-| Find a session from last week by describing it | [Find Session](find-session.md) |
 | Know when an agent finishes or needs me | [Notifications](notifications.md) |
 | Use the Claude Code or Codex chat panel instead of a terminal | [Agent panels](agent-panels.md) |
 | See and manage what the agent changed | [Changes and files](changes-and-files.md) |
@@ -21,12 +20,12 @@ New here? [Install Agntree and start your first session](getting-started.md). It
 
 Each agent has a page with its requirements, the commands Agntree runs for it, and what is and is not supported.
 
-| Agent | Start and resume | Fork | Auto-import | Find Session | Notifications | VS Code panel |
-| --- | --- | --- | --- | --- | --- | --- |
-| [Claude Code](agents/claude-code.md) | Yes | Yes | Yes | Yes | Finished turns and "needs input" | Yes |
-| [Codex](agents/codex.md) | Yes | Yes | Yes | Yes | Finished turns | Yes |
-| [opencode](agents/opencode.md) | Yes | Yes | Yes | Searched, cannot run the search | Finished turns | No |
-| [Pi](agents/pi.md) | Yes | Yes | Yes | Yes | Finished turns | No |
+| Agent | Start and resume | Fork | Auto-import | Notifications | VS Code panel |
+| --- | --- | --- | --- | --- | --- |
+| [Claude Code](agents/claude-code.md) | Yes | Yes | Yes | Finished turns and "needs input" | Yes |
+| [Codex](agents/codex.md) | Yes | Yes | Yes | Finished turns | Yes |
+| [opencode](agents/opencode.md) | Yes | Yes | Yes | Finished turns | No |
+| [Pi](agents/pi.md) | Yes | Yes | Yes | Finished turns | No |
 
 ## Guides
 

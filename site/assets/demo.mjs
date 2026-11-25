@@ -209,13 +209,11 @@ const DIFF = [
  *   filesOpen  true when src/api is unfolded in All Files
  *   fileOpen   true when search.ts is open from All Files
  *   toast      a notification's text
- *   find       the Find Session view: { query, searching } or { query, result: sessionId }
  *   drag       a session whose tab is being dragged to the right half
  *   asking     a session that is waiting at a permission prompt
  *   diffOpen   true when the changed file's diff is open
  */
 const one = (...tabs) => [{ tabs, active: tabs[tabs.length - 1] }];
-const QUERY = 'the one where we fixed the flaky cart test';
 
 export const SCENES = [
   {
@@ -319,16 +317,6 @@ export const SCENES = [
         selected: 'fork',
         worktree: { name: 'coupon-fixed-amount', sessions: ['fork'] },
       },
-    ],
-  },
-  {
-    id: 'find',
-    label: 'Find Session',
-    steps: [
-      { caption: 'Forgot where a conversation went? Describe it.', groups: one('coupon'), selected: 'coupon', input: { title: 'Find Session: describe what you worked on', value: QUERY } },
-      { caption: 'An agent searches your history, across every agent and folder.', groups: one('coupon'), selected: 'coupon', find: { query: QUERY, searching: true } },
-      { caption: 'Resume the match with one click.', groups: one('coupon'), selected: 'coupon', find: { query: QUERY, result: 'flaky' }, cursor: 'result' },
-      { caption: 'Resume the match with one click.', groups: one('coupon', 'flaky'), selected: 'flaky', find: { query: QUERY, result: 'flaky' } },
     ],
   },
   {
@@ -533,18 +521,6 @@ export function renderWindow(step = SCENES[0].steps[0], { assets = 'assets/' } =
     file('README.md', 0),
   ].join('');
 
-  const find = step.find
-    ? `<ul><li><span class="twist">▾</span><span class="name">${escapeHtml(step.find.query)}</span><span class="desc">${
-        step.find.searching ? 'searching…' : '1 session · now'
-      }</span></li>${
-        step.find.searching
-          ? '<li class="l1 dim"><span class="spin"></span><span class="name">Reading Codex sessions in ~/code/storefront</span></li>'
-          : `<li class="l1${step.cursor === 'result' ? ' hover' : ''}">${mark(step.find.result)}<span class="name">${escapeHtml(
-              SESSIONS[step.find.result].name
-            )}</span><span class="desc">storefront · 3d</span>${pointer('result')}</li>`
-      }</ul>`
-    : '';
-
   const tab = (id, active) => {
     const cls = `tab${active ? ' on' : ''}`;
     if (id === 'diff') {
@@ -584,8 +560,6 @@ export function renderWindow(step = SCENES[0].steps[0], { assets = 'assets/' } =
     <div class="vsc-side">
       <div class="vsc-view">Workspaces</div>
       <ul>${rows.join('')}</ul>
-      <div class="vsc-view${step.find ? '' : ' closed'}">Find Session</div>
-      ${find}
       <div class="vsc-view">Changes ${title}</div>
       <ul>${changes}</ul>
       <div class="vsc-view">All Files ${title}</div>

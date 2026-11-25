@@ -16,7 +16,6 @@ Agntree gives the Pi coding agent a session manager inside VS Code. Every Pi ses
 | Fork, here or into a new worktree | Yes, with Pi's own `--fork` |
 | Working and finished marks, finished-turn notifications | Yes |
 | "Needs your input" notifications | Not available. Pi exposes no pending-permission state |
-| Find Session | Searched, and can run the search |
 | Open in the agent's VS Code panel | No. Sessions open in a terminal |
 
 ## Run Pi sessions in parallel
@@ -40,7 +39,6 @@ Click the session. Agntree runs `pi --session` with the session's record, in the
 | New session | `pi --session-id <new-uuid>` |
 | Resume | `pi --session <session-record>` |
 | Fork | `pi --fork <source> --session-id <new-uuid>` |
-| Find Session | `pi --print` with only the `read`, `grep`, `find`, and `ls` tools, and MCP tools denied |
 
 Agntree chooses the session ID before it starts Pi, so a row is always linked to exactly the session it launched.
 
@@ -60,4 +58,3 @@ A session is named with the name you gave it in Pi with `/name`. Your first prom
 
 - [Sessions](../sessions.md)
 - [Fork a session](../fork-sessions.md)
-- [Find Session](../find-session.md)

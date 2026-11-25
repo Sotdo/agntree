@@ -45,7 +45,7 @@ Sessions you started outside Agntree are listed as well. Agntree reads the sessi
 If you remember the work but not the session:
 
 - **Import Existing Sessions…** on a worktree lists every session the agents hold for that directory.
-- [**Find Session**](../find-session.md) searches every agent's sessions in every folder from a description such as "the one where we fixed the flaky cart test".
+- [**Import Existing Sessions…**](../sessions.md) adds sessions the agents already hold for a worktree.
 
 ## Resume a session in a new direction
 

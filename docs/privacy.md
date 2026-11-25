@@ -1,6 +1,6 @@
 # Privacy
 
-Agntree is local-first. It collects no telemetry, needs no account, and keeps its own state inside VS Code on your machine. One feature, Find Session, sends session text to a model provider, and only when you ask it a question. This page says exactly what Agntree reads, stores, and sends.
+Agntree is local-first. It collects no telemetry, needs no account, and keeps its own state inside VS Code on your machine. Agntree itself never sends session text anywhere; this page says exactly what it reads, stores, and sends.
 
 ## What Agntree never does
 
@@ -29,8 +29,7 @@ Agntree keeps a small amount of state in VS Code's extension storage:
 - the folders and repositories you added,
 - the session list: for each row, its name, its agent, and the agent's session ID,
 - your stars, and which sessions you removed,
-- which worktrees came from a pull request,
-- your last ten Find Session searches, with the agent's answers.
+- which worktrees came from a pull request.
 
 It does not copy conversations. A session's content stays in the agent's own storage, which is why removing a row never deletes a conversation and uninstalling Agntree loses nothing.
 
@@ -43,21 +42,6 @@ Agntree itself makes no network requests. Network traffic comes only from tools 
 | Start or resume a session | The agent's CLI, to its model provider, as always |
 | **Clone from GitHub…**, **Rebase onto Upstream…**, a worktree from `upstream` | `git`, to your remotes |
 | **Check Out Pull Request…**, pull request numbers on branches | `gh`, to GitHub |
-| **Find Session…** | The agent that runs the search, to its model provider |
-
-## Find Session
-
-Find Session is the one feature where your session content is sent somewhere because of Agntree.
-
-When you ask a question, the agent you chose (Claude Code, Codex, or Pi) reads your session records to find a match. That includes sessions from your other installed agents. Whatever it reads goes to that agent's model provider, on your account, under the same terms as any other session with that agent.
-
-To keep a search from doing anything else:
-
-- the agent gets read-only tools,
-- MCP servers from your agent's configuration are turned off for the run,
-- nothing is saved to your agent's profile, and the search's temporary folder is deleted afterwards.
-
-Find Session never runs by itself. If you never use it, no session content is sent anywhere by Agntree. See [Find Session](find-session.md).
 
 ## Destructive actions
 
@@ -75,4 +59,3 @@ Agntree is MIT licensed, and everything on this page can be checked in the [sour
 ## Related
 
 - [FAQ](faq.md)
-- [Find Session](find-session.md)

@@ -37,14 +37,6 @@ Open the Command Palette (`Ctrl+Shift+P`, `Cmd+Shift+P` on macOS) and type **Agn
 | **Agntree: Starred Sessions…** | Pick one of your starred sessions to open |
 | **Agntree: Go to Next Session That Needs You** | Open the session that has waited longest since it finished or asked you something |
 
-### Find Session
-
-| Command | What it does |
-| --- | --- |
-| **Agntree: Find Session…** | Describe a past session and have an agent find it in any folder |
-| **Agntree: Find Session Settings…** | Choose the agent, model, and effort for Find Session |
-| **Agntree: Clear Searches…** | Remove past searches from the Find Session view |
-
 ### Changes and files
 
 | Command | What it does |
@@ -75,7 +67,7 @@ Open the Command Palette (`Ctrl+Shift+P`, `Cmd+Shift+P` on macOS) and type **Agn
 The view's title bar has **Add Local Folder or Repository…**. Its `…` menu has:
 
 - **Clone from GitHub…**, **Check Out Pull Request…**
-- **Go to Next Session That Needs You**, **Find Session…**, **Starred Sessions…**
+- **Go to Next Session That Needs You**, **Starred Sessions…**
 - **Set Default Agent…**, the two **Turn On** / **Turn Off** switches, **Agntree Settings…**, **Agntree Keyboard Shortcuts…**
 - **Refresh**
 
@@ -123,18 +115,6 @@ A plain folder row also has every action of a worktree row except the git ones, 
 | **Remove Session from List…** | Right-click, `Delete` / `Cmd+Backspace` | Works on several selected rows; conversations are kept |
 
 Select several sessions with `Shift` or `Ctrl`/`Cmd` click.
-
-## Find Session view
-
-| Action | Where |
-| --- | --- |
-| **Find Session…**, **Clear Searches…** | View title bar |
-| **Find Session Settings…** | View `…` menu |
-| **Stop Search** | Hover icon on a running search |
-| **Ask Again…** | Hover icon or right-click on a finished search |
-| **Remove Search** | Right-click on a finished search |
-| **Resume**, **Show in Workspaces** | Hover icon or right-click on a found session |
-| **Copy Resume Command** | Right-click on a found session |
 
 ## Changes panel
 

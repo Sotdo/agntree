@@ -22,17 +22,6 @@ Agntree works without any configuration. To change how it behaves, choose **Agnt
 
 See [Notifications](../notifications.md).
 
-## Find Session
-
-| Setting | Default | What it does |
-| --- | --- | --- |
-| `agntree.sessionSearch.harness` | `claude` | The agent that runs **Find Session…**: `claude`, `codex`, or `pi`. It must be installed. Sessions from every installed agent are searched whichever one runs the search. Changing it clears the model and effort below. |
-| `agntree.sessionSearch.model` | *(empty)* | The model Find Session uses, written the way that agent's CLI names it, for example `sonnet` for Claude Code. Empty uses the model the agent is already configured with. |
-| `agntree.sessionSearch.effort` | *(empty)* | How hard the agent thinks during a search: `minimal`, `low`, `medium`, `high`, `xhigh`, or `max`. Empty uses the agent's own setting. Higher is slower and costs more, and a level the chosen agent does not support is ignored. |
-| `agntree.sessionSearch.alwaysShowView` | `true` | Show the **Find Session** view in the sidebar all the time. Off: it appears only after your first search. |
-
-**Find Session Settings…**, or the gear in the question box, changes the first three with a list to pick from. See [Find Session](../find-session.md).
-
 ## Window
 
 | Setting | Default | What it does |
@@ -60,7 +49,6 @@ The command Agntree runs to start each agent. Change one when the agent is not o
   "agntree.defaultHarness": "claude",
   "agntree.autoImport.retentionDays": 30,
   "agntree.notifications.onTurnEnd": false,
-  "agntree.sessionSearch.model": "sonnet",
   "agntree.harnessCommands.codex": "/opt/homebrew/bin/codex"
 }
 ```

@@ -17,7 +17,6 @@ Agntree gives OpenAI Codex a session manager inside VS Code. Every Codex thread 
 | Fork, here or into a new worktree | Yes, with the Codex app-server's own fork |
 | Working and finished marks, finished-turn notifications | Yes |
 | "Needs your input" notifications | Not available. Codex exposes no pending-approval state that Agntree can read |
-| Find Session | Searched, and can run the search |
 | Open in the agent's VS Code panel | Yes, the Codex extension |
 
 ## Run Codex sessions in parallel
@@ -48,7 +47,6 @@ Select the panel icon on a session, or choose **Open in Codex UI**, to continue 
 | Resume | `codex resume <thread-id> --cd <worktree>` |
 | List, preview, and fork threads | A private `codex app-server`, over its JSON-RPC protocol |
 | Working and finished state | The thread's rollout file under `~/.codex/sessions/` |
-| Find Session | `codex exec --ephemeral --sandbox read-only` |
 
 Agntree starts the app-server only when it needs it and stops it when idle. It never opens Codex's state database.
 
@@ -56,7 +54,6 @@ Agntree starts the app-server only when it needs it and stops it when idle. It n
 
 - **Archived threads** are not listed.
 - **The Codex app-server protocol is marked experimental by Codex.** After a Codex upgrade, if threads stop appearing, check [Troubleshooting](../troubleshooting.md#sessions-do-not-appear).
-- **Find Session with Codex** turns off the MCP servers in your `config.toml` for the search. A server contributed by a Codex plugin has no per-run switch and stays as configured.
 
 ## Related
 

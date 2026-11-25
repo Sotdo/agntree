@@ -8,7 +8,6 @@ Agntree's default shortcuts use `Ctrl+Alt` on Windows and Linux and `Ctrl+Cmd` o
 | --- | --- | --- |
 | `Ctrl+Alt+N` | `Ctrl+Cmd+N` | Go to Next Session That Needs You |
 | `Ctrl+Alt+Enter` | `Ctrl+Cmd+Enter` | New Session with your default agent, in the current worktree |
-| `Ctrl+Alt+F` | `Ctrl+Cmd+F` | Find Session… |
 | `Ctrl+Alt+S` | `Ctrl+Cmd+S` | Starred Sessions… |
 | `Ctrl+Alt+A` | `Ctrl+Cmd+A` | Show the Agntree sidebar |
 

@@ -14,7 +14,7 @@ To find the full path, run `which claude` (or `where claude` on Windows).
 
 ## Sessions do not appear
 
-- **The folder is not in Agntree.** Sessions are listed for the folders and repositories you added. Add the folder, or use [Find Session](find-session.md) to look everywhere.
+- **The folder is not in Agntree.** Sessions are listed for the folders and repositories you added. Add the folder.
 - **The session is older than the retention window.** Automatic import adds sessions that were active in the last 15 days. Right-click the worktree and choose **Import Existing Sessions…** for older ones.
 - **You removed it before.** A session you removed from the list is not imported again automatically. **Import Existing Sessions…** brings it back.
 - **Automatic import is off.** Check `agntree.autoImport.enabled`.
@@ -68,12 +68,6 @@ After you quit and reopen VS Code, Agntree resumes each restored terminal tab by
 ## I installed a new version but nothing changed
 
 A window that is already open keeps running the old version. Run **Developer: Reload Window**.
-
-## Find Session fails or finds nothing
-
-- **"No installed harness can search sessions."** Find Session needs Claude Code, Codex, or Pi installed to run the search. opencode alone cannot run one.
-- **It found nothing.** Describe the work differently, with words you would have typed in a prompt. For opencode, only the newest 200 sessions are searched.
-- **It stopped.** A search ends after ten minutes. Try a faster model in **Find Session Settings…**.
 
 ## Still stuck?
 
