@@ -227,7 +227,10 @@ export class ManagedWorkspaceService {
         throw new Error('the file is not a list of folders with paths');
       }
       this.invalid = false;
-      return value.folders.map((entry) => entry.path);
+      // VS Code rewrites folder paths relative to the workspace file when it
+      // saves it, so every entry is resolved against this file's directory.
+      const directory = path.dirname(this.filePath);
+      return value.folders.map((entry) => path.resolve(directory, entry.path));
     } catch (error) {
       this.invalid = true;
       throw new Error(

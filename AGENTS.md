@@ -374,7 +374,9 @@ shortens the code but makes failure behavior less clear is a regression; revert 
   sole folder of a single-folder window restarts it. Focus reorders folders through
   `ManagedWorkspaceService`, persisting the focused worktree id to `globalState` first;
   `activate()` restores it, falling back to the first workspace folder. A malformed
-  `~/.agntree/agntree.code-workspace` is refused, never overwritten.
+  `~/.agntree/agntree.code-workspace` is refused, never overwritten. VS Code rewrites the
+  file's folder paths relative to it (`../agntree`) when it saves, so `readFolders()`
+  resolves each entry against the file's own directory.
 - **The Claude Code UI runs in the first workspace folder.** It has no cwd argument, so
   `prepareWorktree()` moves the worktree's folder first before the availability check. Do
   not remove that check: a worktree outside the managed workspace must still be refused,

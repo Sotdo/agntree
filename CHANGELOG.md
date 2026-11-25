@@ -24,6 +24,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Find Session** — the feature is removed, along with its view, commands, settings, and the `agntree.sessionSearch.*` configuration. Session history is still available through **Import Existing Sessions…** and the per-worktree session list. See [ADR 0018](adr/0018-remove-find-session.md).
 - **Open in This Window and `agntree.autoSwitchWorkspaceFolder`** — the commands and setting that replaced VS Code's open folder on every selection are gone; Focus reorders the managed workspace instead. See [ADR 0019](adr/0019-managed-multi-root-workspace.md).
 
+### Fixed
+
+- **Workspace membership after VS Code saves the file** — VS Code rewrites the folder paths in `agntree.code-workspace` relative to the file (`../agntree`). Agntree now resolves each entry against the file's directory, so Projects no longer say **not in workspace** and Focus reorders the folders again.
+
 ## [4.0.0] - 2026-11-14
 
 ### Added

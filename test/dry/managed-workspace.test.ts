@@ -89,6 +89,28 @@ test('folders added in a Remote-SSH window carry the remote host, not the local 
   assert.deepEqual([added.uri.scheme, added.uri.authority, added.uri.fsPath], ['vscode-remote', 'ssh-remote+dev', feature]);
 });
 
+test('a workspace file VS Code rewrote with relative paths still matches its folders', async (t) => {
+  const { service, file, folder, openWindow, windowFolders } = setup(t);
+  const app = folder('app');
+  const feature = folder('app-feature');
+  openWindow(app, feature);
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  fs.writeFileSync(
+    file,
+    JSON.stringify({ folders: [{ name: 'app', path: '../app' }, { name: 'app-feature', path: '../app-feature' }] }, null, 2)
+  );
+  await service.load();
+
+  assert.equal(service.has(app), true);
+  assert.equal(service.has(feature), true);
+  await service.reorderToFirst(feature);
+  assert.deepEqual(windowFolders(), [feature, app]);
+  assert.deepEqual(
+    (JSON.parse(fs.readFileSync(file, 'utf8')) as { folders: { path: string }[] }).folders.map((entry) => entry.path),
+    [feature, app]
+  );
+});
+
 test('a malformed workspace file is refused, never overwritten', async (t) => {
   const { home, service, file, folder } = setup(t);
   fs.mkdirSync(path.dirname(file), { recursive: true });
