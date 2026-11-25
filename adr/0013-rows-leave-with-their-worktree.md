@@ -1,6 +1,7 @@
 # 0013 — Session rows leave with their worktree
 
 - **Status:** Accepted
+- **Superseded by:** [0020](0020-archive-reversible-visibility.md) — archived rows stay and a deleted worktree's rows move to the Archived group.
 - **Date:** 2026-11-10
 
 ## Context

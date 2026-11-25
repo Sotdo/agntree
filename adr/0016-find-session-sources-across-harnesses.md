@@ -1,6 +1,6 @@
 # 0016 — Find Session searches every harness, and runs only where a read-only mode exists
 
-- **Status:** Proposed
+- **Status:** Superseded by [0018](0018-remove-find-session.md)
 - **Date:** 2026-11-11
 - **Extends:** [0014](0014-find-session-agent-over-native-records.md)
 

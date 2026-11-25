@@ -1,6 +1,7 @@
 # 0012 — Import native sessions, name them from the harness, and let the user choose the surface
 
 - **Status:** Accepted
+- **Superseded in part by:** [0020](0020-archive-reversible-visibility.md) — automatic aging is off; Archive owns visibility.
 - **Date:** 2026-10-29
 
 ## Context

@@ -1,6 +1,6 @@
 # 0017 — opencode stays a Find Session source, not a runner
 
-- **Status:** Proposed
+- **Status:** Superseded by [0018](0018-remove-find-session.md)
 - **Date:** 2026-11-11
 - **Extends:** [0016](0016-find-session-sources-across-harnesses.md)
 

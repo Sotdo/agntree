@@ -1,6 +1,7 @@
 # 0009 — Restored terminals keep their chat
 
 - **Status:** Accepted
+- **Superseded in part by:** [0019](0019-managed-multi-root-workspace.md) — the Managed Workspace holds every worktree, so restore no longer assumes one window per workspace.
 - **Date:** 2026-10-25
 
 ## Context

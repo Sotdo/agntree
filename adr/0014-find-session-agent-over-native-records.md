@@ -1,6 +1,6 @@
 # 0014 — Find Session runs an agent over the harnesses' own records
 
-- **Status:** Proposed
+- **Status:** Superseded by [0018](0018-remove-find-session.md)
 - **Date:** 2026-11-10
 
 ## Context
