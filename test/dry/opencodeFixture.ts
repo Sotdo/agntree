@@ -16,7 +16,6 @@ export interface OpencodeState {
   serviceDown?: boolean;
   listDelayMs?: number;
   messageDelayMs?: number;
-  terminated?: number;
 }
 
 /** A fake CLI at `cli` playing `state`, with accessors for what it recorded. */

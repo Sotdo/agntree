@@ -5,7 +5,6 @@ import {
 import { ClaudeAgentsService } from '../services/ClaudeAgentsService';
 import { ClaudeTurnReading } from '../services/ClaudeTurnState';
 import { ClaudeUi } from './claudeUi';
-import { ClaudeSearchRunner, ClaudeSessionSearch } from './claudeSearch';
 import { generateId } from '../types';
 import {
   ForkResult,
@@ -17,8 +16,6 @@ import {
   NativeUiCapability,
   PreviewMessage,
   SessionMetadata,
-  SessionSearchRunner,
-  SessionSearchSource,
 } from './types';
 import { commandExists, getHarnessCommand, quoteShellArgument } from './commandUtils';
 import { harnessTreeIcons } from './treeIcons';
@@ -44,8 +41,6 @@ export class ClaudeHarness implements HarnessAdapter {
     preview: 'inline',
   };
   readonly nativeUi: NativeUiCapability;
-  readonly sessionSearch: SessionSearchSource;
-  readonly sessionSearchRunner: SessionSearchRunner;
 
   private readonly sessionService: ClaudeSessionService;
   private readonly agentsService: ClaudeAgentsService;
@@ -57,11 +52,6 @@ export class ClaudeHarness implements HarnessAdapter {
       options.agentsService ??
       new ClaudeAgentsService({ command: () => this.command });
     this.nativeUi = options.nativeUi ?? new ClaudeUi();
-    this.sessionSearch = new ClaudeSessionSearch(this.sessionService);
-    this.sessionSearchRunner = new ClaudeSearchRunner({
-      command: () => this.command,
-      projectsDir: () => this.sessionService.getProjectsDirectory(),
-    });
   }
 
   get command(): string {

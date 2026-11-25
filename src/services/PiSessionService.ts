@@ -9,10 +9,10 @@ import {
   piProjectDirMatches,
 } from '../utils/paths';
 import { BoundedCache } from '../utils/boundedCache';
-import { JsonlTailScan, parseJsonLine, readJsonlTail, scanJsonlLines } from '../utils/jsonlTail';
+import { JsonlTailScan, readJsonlTail } from '../utils/jsonlTail';
 import { JsonlAppendReader, JsonlFold } from '../utils/jsonlAppendReader';
 import { RecordPathCatalog, StatCache } from '../utils/recordCache';
-import { promptMatcher, truncateName } from '../utils/text';
+import { truncateName } from '../utils/text';
 
 /**
  * A Pi session parsed from its JSONL record.
@@ -594,21 +594,6 @@ export class PiSessionService {
     return [...roots];
   }
 
-  /**
-   * Roots the session finder may read: the profile's sessions directory and
-   * a flat `sessionDir` override, when one is configured. Grep/Glob recurse
-   * through the per-cwd subdirectories, so listing them is unnecessary.
-   */
-  searchDirectories(): string[] {
-    const dirs = new Set<string>();
-    dirs.add(this.getSessionsRoot());
-    const override = this.sessionDirOverride(process.cwd());
-    if (override) {
-      dirs.add(override);
-    }
-    return [...dirs];
-  }
-
   private readDirectoryNames(dir: string, force = false): string[] {
     const cached = this.directoryCache.get(dir);
     if (cached && !force && Date.now() - cached.at < DIRECTORY_CACHE_TTL_MS) {
@@ -846,42 +831,6 @@ export class PiSessionService {
   /** Whether the record exists and can be opened with `--session <id>`. */
   async isSessionResumable(sessionId: string, cwd?: string): Promise<boolean> {
     return (await this.getSessionById(sessionId, cwd)) !== null;
-  }
-
-  /**
-   * A session and the earliest prompt the user typed in it that begins with
-   * `opening`, ignoring case and whitespace. The record is scanned for the
-   * quote and then read through the shared parse cache; a record the tree
-   * already parsed costs no second read.
-   */
-  async findSessionPrompt(
-    sessionId: string,
-    opening: string,
-    cwd?: string
-  ): Promise<{ session: PiSession; prompt?: PreviewMessage } | null> {
-    const filePath = this.getSessionFilePath(sessionId, cwd);
-    if (!filePath) {
-      return null;
-    }
-    const matches = promptMatcher(opening);
-    let prompt: PreviewMessage | undefined;
-    if (matches) {
-      try {
-        await scanJsonlLines(filePath, (line) => {
-          const user = piUserPrompt(parseJsonLine(line));
-          if (user && matches(user.text)) {
-            prompt = user;
-            return true;
-          }
-        });
-      } catch {
-        // An unreadable record confirms nothing.
-        return null;
-      }
-    }
-
-    const session = await this.getSessionById(sessionId, cwd);
-    return session ? { session, prompt } : null;
   }
 
   /**

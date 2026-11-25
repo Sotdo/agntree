@@ -85,13 +85,6 @@
           "size": 4
         },
         {
-          "id": "agntree.sessionSearchView",
-          "name": "Find Session",
-          "when": "config.agntree.sessionSearch.alwaysShowView || agntree.hasSessionSearches",
-          "size": 2,
-          "visibility": "collapsed"
-        },
-        {
           "id": "agntree.changesView",
           "name": "Changes",
           "size": 2
@@ -115,10 +108,6 @@
       {
         "view": "agntree.filesView",
         "contents": "Select a worktree, folder, or session to browse its files."
-      },
-      {
-        "view": "agntree.sessionSearchView",
-        "contents": "Describe what you worked on and a coding agent finds the session among your past ones, in any folder.\n\n[Find Session](command:agntree.findSession)\n\nThe agent reads your session transcripts, so what it reads goes to its model provider."
       }
     ],
     "commands": [
@@ -516,60 +505,6 @@
         "icon": "$(git-pull-request)"
       },
       {
-        "command": "agntree.findSession",
-        "title": "Find Session…",
-        "category": "Agntree",
-        "icon": "$(sparkle)"
-      },
-      {
-        "command": "agntree.askSessionSearchAgain",
-        "title": "Ask Again…",
-        "category": "Agntree",
-        "icon": "$(refresh)"
-      },
-      {
-        "command": "agntree.configureSessionSearch",
-        "title": "Find Session Settings…",
-        "category": "Agntree",
-        "icon": "$(settings-gear)"
-      },
-      {
-        "command": "agntree.cancelSessionSearch",
-        "title": "Stop Search",
-        "category": "Agntree",
-        "icon": "$(debug-stop)"
-      },
-      {
-        "command": "agntree.removeSessionSearch",
-        "title": "Remove Search",
-        "category": "Agntree",
-        "icon": "$(close)"
-      },
-      {
-        "command": "agntree.clearSessionSearches",
-        "title": "Clear Searches…",
-        "category": "Agntree",
-        "icon": "$(clear-all)"
-      },
-      {
-        "command": "agntree.resumeSearchMatch",
-        "title": "Resume",
-        "category": "Agntree",
-        "icon": "$(play)"
-      },
-      {
-        "command": "agntree.revealSearchMatch",
-        "title": "Show in Workspaces",
-        "category": "Agntree",
-        "icon": "$(list-tree)"
-      },
-      {
-        "command": "agntree.copySearchMatchCommand",
-        "title": "Copy Resume Command",
-        "category": "Agntree",
-        "icon": "$(copy)"
-      },
-      {
         "command": "agntree.closeChat",
         "title": "Close Session",
         "category": "Agntree",
@@ -639,11 +574,6 @@
         "command": "agntree.newDefaultSession",
         "key": "ctrl+alt+enter",
         "mac": "ctrl+cmd+enter"
-      },
-      {
-        "command": "agntree.findSession",
-        "key": "ctrl+alt+f",
-        "mac": "ctrl+cmd+f"
       },
       {
         "command": "workbench.view.extension.agntree",
@@ -758,7 +688,7 @@
             "type": "integer",
             "default": 15,
             "minimum": 1,
-            "markdownDescription": "Session rows leave the tree after this many days without activity, whether they were imported or started in Agntree. Starred sessions always stay. Only the row is removed: the agent keeps the conversation, and **Import Existing Sessions…** or **Find Session…** brings it back.",
+            "markdownDescription": "Session rows leave the tree after this many days without activity, whether they were imported or started in Agntree. Starred sessions always stay. Only the row is removed: the agent keeps the conversation, and **Import Existing Sessions…** brings it back.",
             "order": 4
           }
         }
@@ -795,82 +725,9 @@
         }
       },
       {
-        "id": "agntree.findSession",
-        "title": "Find Session",
-        "order": 3,
-        "properties": {
-          "agntree.sessionSearch.harness": {
-            "type": "string",
-            "enum": [
-              "claude",
-              "codex",
-              "pi"
-            ],
-            "enumDescriptions": [
-              "Claude Code runs the search with read-only file tools.",
-              "Codex runs the search in its read-only sandbox.",
-              "Pi runs the search with its read-only read, grep, find, and ls tools."
-            ],
-            "default": "claude",
-            "enumItemLabels": [
-              "Claude Code",
-              "Codex",
-              "Pi"
-            ],
-            "markdownDescription": "The agent that runs **Find Session…**. It must be installed. Sessions from every installed agent are searched whichever one runs the search; opencode's sessions are searched too, but opencode cannot run it. Changing this clears `#agntree.sessionSearch.model#` and `#agntree.sessionSearch.effort#`.",
-            "order": 1
-          },
-          "agntree.sessionSearch.model": {
-            "type": "string",
-            "default": "",
-            "markdownDescription": "The model **Find Session…** uses, written the way that agent's CLI names it (for example `sonnet` for Claude Code). Leave empty to use the model the agent is already configured with. **Find Session Settings…** offers a list to pick from.",
-            "order": 2
-          },
-          "agntree.sessionSearch.effort": {
-            "type": "string",
-            "enum": [
-              "",
-              "minimal",
-              "low",
-              "medium",
-              "high",
-              "xhigh",
-              "max"
-            ],
-            "enumItemLabels": [
-              "Use the agent's setting",
-              "Minimal",
-              "Low",
-              "Medium",
-              "High",
-              "Extra high",
-              "Max"
-            ],
-            "enumDescriptions": [
-              "Use the reasoning effort the agent is already configured with.",
-              "Pi only.",
-              "Fastest and cheapest search.",
-              "",
-              "Slower, more thorough search.",
-              "",
-              "Claude Code and Pi only."
-            ],
-            "default": "",
-            "markdownDescription": "How hard the agent thinks during **Find Session…**. Higher is slower and costs more. A level the chosen agent does not support is ignored.",
-            "order": 3
-          },
-          "agntree.sessionSearch.alwaysShowView": {
-            "type": "boolean",
-            "default": true,
-            "markdownDescription": "Show the **Find Session** view in the Agntree sidebar all the time. Turn off to show it only after your first search.",
-            "order": 4
-          }
-        }
-      },
-      {
         "id": "agntree.window",
         "title": "Window",
-        "order": 4,
+        "order": 3,
         "properties": {
           "agntree.autoSwitchWorkspaceFolder": {
             "type": "boolean",
@@ -1004,26 +861,6 @@
           "command": "agntree.files.refresh",
           "when": "view == agntree.filesView",
           "group": "navigation@4"
-        },
-        {
-          "command": "agntree.findSession",
-          "when": "view == agntree.workspacesView",
-          "group": "1_sessions@2"
-        },
-        {
-          "command": "agntree.findSession",
-          "when": "view == agntree.sessionSearchView",
-          "group": "navigation@1"
-        },
-        {
-          "command": "agntree.clearSessionSearches",
-          "when": "view == agntree.sessionSearchView",
-          "group": "navigation@2"
-        },
-        {
-          "command": "agntree.configureSessionSearch",
-          "when": "view == agntree.sessionSearchView",
-          "group": "1_actions@1"
         },
         {
           "command": "agntree.checkoutPR",
@@ -1361,51 +1198,6 @@
           "command": "agntree.files.delete",
           "when": "view == agntree.filesView && (viewItem == file || viewItem == folder)",
           "group": "6_edit@2"
-        },
-        {
-          "command": "agntree.cancelSessionSearch",
-          "when": "view == agntree.sessionSearchView && viewItem == sessionSearchRunning",
-          "group": "inline@1"
-        },
-        {
-          "command": "agntree.askSessionSearchAgain",
-          "when": "view == agntree.sessionSearchView && viewItem == sessionSearch",
-          "group": "inline@1"
-        },
-        {
-          "command": "agntree.askSessionSearchAgain",
-          "when": "view == agntree.sessionSearchView && viewItem == sessionSearch",
-          "group": "navigation@1"
-        },
-        {
-          "command": "agntree.removeSessionSearch",
-          "when": "view == agntree.sessionSearchView && viewItem == sessionSearch",
-          "group": "3_destructive"
-        },
-        {
-          "command": "agntree.resumeSearchMatch",
-          "when": "view == agntree.sessionSearchView && viewItem == sessionSearchMatch",
-          "group": "inline@1"
-        },
-        {
-          "command": "agntree.revealSearchMatch",
-          "when": "view == agntree.sessionSearchView && viewItem == sessionSearchMatch",
-          "group": "inline@2"
-        },
-        {
-          "command": "agntree.resumeSearchMatch",
-          "when": "view == agntree.sessionSearchView && viewItem == sessionSearchMatch",
-          "group": "navigation@1"
-        },
-        {
-          "command": "agntree.revealSearchMatch",
-          "when": "view == agntree.sessionSearchView && viewItem == sessionSearchMatch",
-          "group": "navigation@2"
-        },
-        {
-          "command": "agntree.copySearchMatchCommand",
-          "when": "view == agntree.sessionSearchView && viewItem == sessionSearchMatch",
-          "group": "navigation@3"
         }
       ],
       "agntree.newSession": [
@@ -1635,30 +1427,6 @@
         },
         {
           "command": "agntree.openDiff",
-          "when": "false"
-        },
-        {
-          "command": "agntree.askSessionSearchAgain",
-          "when": "false"
-        },
-        {
-          "command": "agntree.cancelSessionSearch",
-          "when": "false"
-        },
-        {
-          "command": "agntree.removeSessionSearch",
-          "when": "false"
-        },
-        {
-          "command": "agntree.resumeSearchMatch",
-          "when": "false"
-        },
-        {
-          "command": "agntree.revealSearchMatch",
-          "when": "false"
-        },
-        {
-          "command": "agntree.copySearchMatchCommand",
           "when": "false"
         },
         {

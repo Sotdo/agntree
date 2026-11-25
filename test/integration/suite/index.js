@@ -64,12 +64,6 @@ exports.run = async function run() {
     'New Session asks which agent until a default agent is set'
   );
   check(
-    config.get('sessionSearch.harness') === 'claude' &&
-      config.get('sessionSearch.model') === '' &&
-      config.get('sessionSearch.effort') === '',
-    "Find Session defaults to Claude Code with the harness's configured model and effort"
-  );
-  check(
     config.get('autoImport.enabled') === true &&
       config.get('autoImport.retentionDays') === 15,
     'auto-import defaults to on with a fifteen-day retention'

@@ -1,6 +1,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import { lastTextBlock, promptMatcher, truncateName } from '../utils/text';
+import { lastTextBlock, truncateName } from '../utils/text';
 import {
   claudeProjectDirMatches,
   encodeClaudeProjectPath,
@@ -15,7 +15,7 @@ import {
   readTurnStateTail,
 } from './ClaudeTurnState';
 import { RecordPathCatalog, StatCache } from '../utils/recordCache';
-import { parseJsonLine, scanJsonlLines } from '../utils/jsonlTail';
+import { parseJsonLine } from '../utils/jsonlTail';
 import { claudeConfigDir, claudeProjectDirOverride } from './claudeConfig';
 
 /**
@@ -312,57 +312,6 @@ export class ClaudeSessionService {
       return [];
     }
     return session.recentUserPrompts.slice(-maxMessages);
-  }
-
-  /**
-   * A session and the earliest prompt the user typed in it that begins with
-   * `opening`, ignoring case and whitespace. The transcript is streamed once:
-   * an uncached one is parsed on the same pass and the parse is cached, and a
-   * cached one is read only until the prompt turns up.
-   */
-  async findSessionPrompt(
-    sessionId: string,
-    opening: string
-  ): Promise<{ session: ClaudeSession; prompt?: PreviewMessage } | null> {
-    const filePath = this.getSessionFilePath(sessionId);
-    if (!filePath) {
-      return null;
-    }
-    let stats: fs.Stats;
-    try {
-      stats = await fs.promises.stat(filePath);
-    } catch {
-      return null;
-    }
-    const matches = promptMatcher(opening);
-    const fresh = this.sessionFileCache.peek(filePath, stats);
-    if (fresh && (!fresh.value || !matches)) {
-      return fresh.value ? { session: fresh.value } : null;
-    }
-
-    const parser = fresh ? undefined : new TranscriptParser(sessionId, filePath, stats.mtime);
-    let prompt: PreviewMessage | undefined;
-    try {
-      await scanJsonlLines(filePath, (line) => {
-        const entry = parser ? parser.add(line) : parseJsonLine(line);
-        const text: string | null = prompt || !matches ? null : claudeUserPrompt(entry);
-        if (text && matches!(text)) {
-          const timestamp = new Date((entry as { timestamp?: string }).timestamp ?? NaN).getTime();
-          prompt = { text, timestamp: isNaN(timestamp) ? null : timestamp };
-          // A fresh parse reads on to the end; a cached one can stop here.
-          return !parser;
-        }
-      });
-    } catch {
-      // An unreadable transcript confirms nothing.
-      return null;
-    }
-
-    const session = parser ? parser.finish() : fresh!.value;
-    if (parser) {
-      this.sessionFileCache.set(filePath, stats, session);
-    }
-    return session ? { session, prompt } : null;
   }
 }
 

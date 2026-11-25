@@ -5,7 +5,7 @@ import { execFile, spawn } from 'child_process';
 import { HarnessSession, PreviewMessage, TurnState } from '../harnesses/types';
 import { getHarnessCommand } from '../harnesses/commandUtils';
 import { canonicalPath } from '../utils/paths';
-import { clampInlineText, lastTextBlock, promptMatcher } from '../utils/text';
+import { clampInlineText, lastTextBlock } from '../utils/text';
 
 /** Session shape returned by the opencode v2 API. */
 export interface OpencodeSessionInfo {
@@ -71,11 +71,6 @@ const API_TIMEOUT_MS = 15_000;
 const EXPORT_TIMEOUT_MS = 30_000;
 const PAGE_SIZE = 50;
 const MAX_PAGES = 10;
-/** The finder's global listing: enough pages for a bounded recent history. */
-const SEARCH_PAGE_SIZE = 100;
-const MAX_SEARCH_PAGES = 10;
-const MESSAGE_PAGE_SIZE = 100;
-const MAX_MESSAGE_PAGES = 5;
 
 /**
  * Talks to opencode through its official CLI/API.
@@ -128,94 +123,6 @@ export class OpencodeSessionService {
     } finally {
       this.listRequests.delete(key);
     }
-  }
-
-  /**
-   * Every top-level, non-archived session across all projects, newest first.
-   * The finder uses this to build its snapshot; the list is deliberately not
-   * cached beyond the call, since the snapshot is already per-search. A stop
-   * or the search's preparation deadline ends the listing early.
-   */
-  async listAllSessions(
-    options: { signal?: AbortSignal; deadline?: number } = {}
-  ): Promise<OpencodeSessionInfo[]> {
-    const sessions = new Map<string, OpencodeSessionInfo>();
-    const pages = this.pages<OpencodeSessionInfo>(
-      'session.list',
-      { limit: String(SEARCH_PAGE_SIZE), parentID: 'null', archived: 'false' },
-      { maxPages: MAX_SEARCH_PAGES, cwd: os.tmpdir(), ...options }
-    );
-    for await (const data of pages) {
-      for (const session of data) {
-        if (!sessions.has(session.id)) {
-          sessions.set(session.id, session);
-        }
-      }
-    }
-    return [...sessions.values()].sort(
-      (a, b) => (b.time?.updated ?? 0) - (a.time?.updated ?? 0)
-    );
-  }
-
-  /**
-   * The user's own prompts in a session, oldest first. The message API
-   * returns the messages the user sent, not opencode's synthetic context, so
-   * these are the prompts a finder can quote.
-   */
-  async listUserMessages(
-    sessionId: string,
-    cwd?: string,
-    signal?: AbortSignal
-  ): Promise<PreviewMessage[]> {
-    const prompts: PreviewMessage[] = [];
-    const seen = new Set<string>();
-    const pages = this.pages<{
-      id?: string;
-      text?: unknown;
-      content?: unknown;
-      time?: { created?: number };
-    }>(
-      'session.message.list',
-      { sessionID: sessionId, type: 'user', limit: String(MESSAGE_PAGE_SIZE) },
-      { maxPages: MAX_MESSAGE_PAGES, cwd: cwd ?? os.tmpdir(), signal }
-    );
-    for await (const data of pages) {
-      for (const message of data) {
-        const text =
-          typeof message.text === 'string'
-            ? message.text.trim()
-            : lastTextBlock(message.content);
-        if (!text || (message.id && seen.has(message.id))) {
-          continue;
-        }
-        if (message.id) {
-          seen.add(message.id);
-        }
-        prompts.push({ text, timestamp: message.time?.created ?? null });
-      }
-    }
-    return prompts.sort((a, b) => (a.timestamp ?? 0) - (b.timestamp ?? 0));
-  }
-
-  /**
-   * A session and the earliest prompt the user typed in it that begins with
-   * `opening`, ignoring case and whitespace. Null when the session no longer
-   * exists; `prompt` is absent when the quote is not one of its prompts.
-   */
-  async findSessionPrompt(
-    sessionId: string,
-    opening: string,
-    cwd?: string
-  ): Promise<{ session: OpencodeSessionInfo; prompt?: PreviewMessage } | null> {
-    const session = await this.getSession(sessionId, cwd);
-    if (!session) {
-      return null;
-    }
-    const matches = promptMatcher(opening);
-    const prompt = matches
-      ? (await this.listUserMessages(sessionId, cwd)).find((candidate) => matches(candidate.text))
-      : undefined;
-    return { session, prompt };
   }
 
   /**

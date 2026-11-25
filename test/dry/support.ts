@@ -15,7 +15,6 @@ import {
   HarnessSession,
   NativeUiCapability,
   NativeUiSurfaceTracker,
-  SessionSearchRunner,
 } from '../../src/harnesses/types';
 import { ChatSession, HarnessId, Worktree } from '../../src/types';
 
@@ -281,17 +280,6 @@ export function fakeAdapter(
     prepareForkToNewWorktree: async () => {
       throw new Error(`${id} worktree fork is not faked`);
     },
-    ...overrides,
-  };
-}
-
-/** A search runner that is available and answers that nothing matched. */
-export function fakeSearchRunner(overrides: Partial<SessionSearchRunner> = {}): SessionSearchRunner {
-  return {
-    suggestedModels: [],
-    efforts: ['low', 'medium', 'high'],
-    isAvailable: async () => true,
-    run: async () => JSON.stringify({ answer: 'Nothing matched.', matches: [] }),
     ...overrides,
   };
 }

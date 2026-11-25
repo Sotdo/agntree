@@ -7,7 +7,6 @@ import {
   OpencodeSessionService,
   toHarnessSession,
 } from '../services/OpencodeSessionService';
-import { OpencodeSessionSearch } from './opencodeSearch';
 import {
   ForkResult,
   HarnessAdapter,
@@ -16,7 +15,6 @@ import {
   LaunchOptions,
   PreviewMessage,
   SessionMetadata,
-  SessionSearchSource,
 } from './types';
 import { commandExists, getHarnessCommand, quoteShellArgument } from './commandUtils';
 import { harnessTreeIcons } from './treeIcons';
@@ -37,13 +35,8 @@ export class OpencodeHarness implements HarnessAdapter {
     newSessionId: false,
     preview: 'lazy',
   };
-  readonly sessionSearch: SessionSearchSource;
 
   private readonly sessionService = new OpencodeSessionService();
-
-  constructor() {
-    this.sessionSearch = new OpencodeSessionSearch(this.sessionService);
-  }
 
   get command(): string {
     return getHarnessCommand('opencode', 'opencode');
