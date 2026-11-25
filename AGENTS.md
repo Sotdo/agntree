@@ -389,6 +389,15 @@ shortens the code but makes failure behavior less clear is a regression; revert 
   title. Never type into a terminal whose PID matches the record — it is the running
   agent. A rename is durable only after the command starts and only for the active tab.
   See [ADR 0009](adr/0009-restored-terminals-keep-their-chat.md).
+- **A click prefers the official UI, and surface switches wait for idle.** The order
+  lives in `openChatPrimary()`: tracked terminal, open panel, official UI, terminal
+  resume. `agntree.defaultSessionSurface` only chooses where a new session starts. Ask
+  `HarnessAdapter.isSessionRunning?()` before resuming; only Claude answers (from
+  `claude agents --json`), and an unknown answer must not block anything.
+- **Worktree delete goes to the Trash first.** `workspace.fs.delete(..., { useTrash: true })`
+  followed by `git worktree prune`; `GitService.removeWorktree()` runs only when the host
+  has no usable Trash, and the message and operation log must say the delete was permanent.
+  See [ADR 0024](adr/0024-preflights-and-trash-delete.md).
 - **`treeView.reveal()` needs stable ids, `getParent()`, and a visible tree.** See the
   pattern in `ARCHITECTURE.md`.
 - **A tree item shows one icon.** Working/done/closed/new are baked into generated SVGs;

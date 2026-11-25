@@ -60,7 +60,8 @@ Give each task its own branch and its own directory, so agents never edit the sa
 
 - Repository to worktree to running agent in three clicks.
 - Ahead and behind counts and the pull request number on every branch.
-- Merge, rebase, and delete worktrees without leaving the sidebar.
+- Merge, rebase, and delete worktrees without leaving the sidebar. A deleted worktree goes to the Trash.
+- A read-only Branches list per Project, with every branch that has a worktree one click away.
 - Every worktree of your Open Projects lives in one managed workspace, so the Claude Code panel opens in the right directory and agents keep running while you move between them.
 
 ![Creating a git worktree from the Agntree sidebar and starting a Claude Code session in it, beside a session on main](media/demo-worktrees.gif)

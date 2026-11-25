@@ -25,22 +25,24 @@ A session needs at least one prompt before a panel can open it. A session that i
 
 ## Go back to the terminal
 
-Choose **Open Session in Terminal** on the row. Agntree asks before closing the panel tab, then resumes the session in the CLI.
+Choose **Open Session in Terminal** on the row. Agntree asks before closing the panel tab, then resumes the session in the CLI. A switch the other way — from a terminal to a panel — asks the same way. Both are refused while the agent is working on a turn, so a surface change never kills a running turn; wait for it to finish and try again.
+
+## What a click opens
+
+A click on a session that is not running follows this order:
+
+1. The terminal Agntree tracks for it.
+2. The panel that already shows it.
+3. The agent's official panel, when its extension is installed and can open the session's worktree.
+4. A terminal, resuming the session.
+
+A Claude Code or Codex session therefore opens in its own extension's panel by default. **Open Session in Terminal** resumes it in the CLI instead. [`agntree.defaultSessionSurface`](reference/settings.md#sessions) chooses where a **new** session starts, not what a click does.
+
+When the harness can tell that a process Agntree did not start is using the session — Claude Code through `claude agents --json` — a click does not start a second process. It offers **Copy Resume Command** or a confirmed **Start Another Process…**. Codex, opencode, and Pi cannot report a session running elsewhere, so they have no such guard.
 
 ## Start a new session in a panel
 
-In the **New Session** menu, choose **New Claude Code Session in Claude Code UI** or **New Codex Session in Codex UI**. Agntree adds a row straight away, opens a new conversation, and links the row to the real session after your first prompt.
-
-## Choose what a click does
-
-By default, clicking a session opens its terminal. To prefer the panel, set [`agntree.defaultSessionSurface`](reference/settings.md#sessions) to **Agent's VS Code panel**.
-
-| Setting | A click on a session |
-| --- | --- |
-| **Terminal** (default) | Opens or focuses its terminal |
-| **Agent's VS Code panel** | Opens the panel when it can, otherwise the terminal |
-
-Whatever the setting, a click on a session that is already open goes to where it is open: a live terminal is focused, an open panel is revealed. The **Open Session in Terminal** and panel actions always do what they say.
+In the **New Session** menu, choose **New Claude Code Session in Claude Code UI** or **New Codex Session in Codex UI**. Agntree adds a row straight away, opens a new conversation, and links the row to the real session after your first prompt. Setting [`agntree.defaultSessionSurface`](reference/settings.md#sessions) to **Agent's VS Code panel** makes every new session start there.
 
 ## Which folder the panel runs in
 

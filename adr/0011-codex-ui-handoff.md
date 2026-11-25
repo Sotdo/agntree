@@ -2,6 +2,7 @@
 
 - **Status:** Accepted
 - **Superseded in part by:** [ADR 0012](0012-session-import-and-surface-choice.md) — a new session may now start in the UI; the existing-thread handoff is unchanged.
+- **Superseded in part by:** [0023](0023-open-policy-and-surface-handoff.md) — a click prefers the UI over a terminal resume, and switching waits for idle.
 - **Date:** 2026-10-28
 
 ## Context

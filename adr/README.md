@@ -15,9 +15,9 @@ to learn how a subsystem works today, and the ADR to learn why it is shaped that
 | [0007](0007-lean-claude-metadata.md) | Claude metadata is deliberately lean | Accepted |
 | [0008](0008-rows-reflect-what-exists.md) | A row exists only while its session does | Accepted |
 | [0009](0009-restored-terminals-keep-their-chat.md) | Restored terminals keep their chat by title and PID | Accepted; superseded in part by 0019 |
-| [0010](0010-claude-ui-handoff.md) | Hand an existing Claude session to the Claude Code UI | Accepted; new-session path superseded by 0012; first-folder guard superseded in part by 0019 |
-| [0011](0011-codex-ui-handoff.md) | Hand an existing Codex thread to the Codex extension UI | Accepted; new-session path superseded by 0012 |
-| [0012](0012-session-import-and-surface-choice.md) | Import native sessions, name them from the harness, and choose the surface | Accepted; retention superseded in part by 0020 |
+| [0010](0010-claude-ui-handoff.md) | Hand an existing Claude session to the Claude Code UI | Accepted; new-session path superseded by 0012; first-folder guard superseded in part by 0019; click order superseded in part by 0023 |
+| [0011](0011-codex-ui-handoff.md) | Hand an existing Codex thread to the Codex extension UI | Accepted; new-session path superseded by 0012; click order superseded in part by 0023 |
+| [0012](0012-session-import-and-surface-choice.md) | Import native sessions, name them from the harness, and choose the surface | Accepted; retention superseded in part by 0020; click surface superseded in part by 0023 |
 | [0013](0013-rows-leave-with-their-worktree.md) | Session rows leave with their worktree or workspace root | Accepted; superseded by 0020 |
 | [0014](0014-find-session-agent-over-native-records.md) | Find Session runs an agent over the harnesses' own records, with no index | Superseded by 0018 |
 | [0015](0015-pi-sessions-from-transcript.md) | Observe Pi sessions through their documented transcript, not RPC | Accepted |
@@ -28,6 +28,8 @@ to learn how a subsystem works today, and the ADR to learn why it is shaped that
 | [0020](0020-archive-reversible-visibility.md) | Archive is a reversible visibility state | Proposed (Slice 3); supersedes 0013 and in part 0012 |
 | [0021](0021-antigravity-provider.md) | Antigravity is a first-class agent provider | Proposed (Slice 2) |
 | [0022](0022-status-and-attention-without-hooks.md) | Status and attention use native signals, not hooks | Proposed (Slices 1–3) |
+| [0023](0023-open-policy-and-surface-handoff.md) | Opening a session prefers the official UI; surface changes wait for idle | Proposed (Slice 1); supersedes in part 0010, 0011, 0012 |
+| [0024](0024-preflights-and-trash-delete.md) | Dangerous git actions preflight, and a worktree delete goes to the Trash | Proposed (Slice 1) |
 
 ## Writing one
 

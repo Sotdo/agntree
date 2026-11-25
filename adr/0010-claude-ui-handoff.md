@@ -3,6 +3,7 @@
 - **Status:** Accepted
 - **Superseded in part by:** [ADR 0012](0012-session-import-and-surface-choice.md) — a new session may now start in the UI; the existing-session handoff is unchanged.
 - **Superseded in part by:** [0019](0019-managed-multi-root-workspace.md) — the first-folder guard is replaced by focusing the worktree first.
+- **Superseded in part by:** [0023](0023-open-policy-and-surface-handoff.md) — a click prefers the UI over a terminal resume, and switching waits for idle.
 - **Date:** 2026-10-27
 - **Related:** [0011](0011-codex-ui-handoff.md) generalizes the surface tracker from
   chats to native session IDs; the Claude decision here is unchanged.

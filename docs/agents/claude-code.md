@@ -31,7 +31,7 @@ Each session now has its own branch and directory, and the sidebar shows which a
 
 ## Resume a Claude Code session
 
-Click the session. Agntree runs `claude --resume <session-id>` in the session's worktree. To do the same by hand, right-click the session and choose **Copy Resume Command**.
+Click the session. Agntree opens the Claude Code panel when the extension is installed, and otherwise runs `claude --resume <session-id>` in the session's worktree; **Open Session in Terminal** always uses the CLI. To resume by hand, right-click the session and choose **Copy Resume Command**.
 
 ## Know when Claude Code needs you
 

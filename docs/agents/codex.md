@@ -31,7 +31,7 @@ The sidebar shows which threads are working and which have finished, and each on
 
 ## Resume a Codex session
 
-Click the session. Agntree runs `codex resume <thread-id> --cd <worktree>`. Right-click and choose **Copy Resume Command** to get that line for any terminal.
+Click the session. Agntree opens the Codex panel when the extension is installed, and otherwise runs `codex resume <thread-id> --cd <worktree>`; **Open Session in Terminal** always uses the CLI. Right-click and choose **Copy Resume Command** to get that line for any terminal.
 
 A new Codex session shows `new` until your first prompt. Codex creates the thread at that point, and Agntree links the row to it and takes the thread's name.
 

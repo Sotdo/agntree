@@ -36,6 +36,16 @@ A Project is either **Open** or **Registered**: an Open Project contributes ever
 
 The tree refreshes by itself when you switch branches or add a worktree from the command line.
 
+## Browse branches
+
+Every git Project has a **Branches** row below its worktrees, collapsed until you open it. It lists the local branches and nothing else: remote-tracking branches are not shown.
+
+- A branch with a worktree carries that worktree's color; click it to focus the worktree.
+- A branch without a worktree is greyed and says `no worktree`. Create a worktree to work on it.
+- A worktree on a detached HEAD appears as its short commit.
+
+The group is read-only: it creates, checks out, and deletes nothing.
+
 ## Create a worktree
 
 Hover a repository and select **Create Worktree…** (**+**), then choose where the branch comes from:
@@ -59,9 +69,9 @@ Then hover the new worktree and select **New Session** (**+**) to start an agent
 
 ## Check out a pull request
 
-Right-click a repository and choose **Check Out Pull Request…**, or pick it from the Workspaces `…` menu. Select an open pull request from the list, or enter a number or URL.
+Right-click a repository and choose **Check Out Pull Request…**, or pick it from the Projects `…` menu. Select an open pull request from the list, or enter a number or URL.
 
-Agntree fetches the pull request into a local branch named `pr-<number>` and creates a worktree for it, so reviewing a PR never disturbs the branch you are on. This works for pull requests from forks. Start a session in the new worktree to have an agent review, test, or extend the change.
+Agntree confirms the branch name and the new worktree's path, then fetches the pull request into a local branch named `pr-<number>` and creates a worktree for it, so reviewing a PR never disturbs the branch you are on. This works for pull requests from forks. Start a session in the new worktree to have an agent review, test, or extend the change.
 
 **Open Pull Request in Browser** on any worktree opens the pull request for its branch.
 
@@ -83,18 +93,18 @@ The worktree's right-click menu has the rest:
 
 ## Merge and rebase
 
-**Merge Branch into This Worktree…** merges another worktree's branch into the one you right-clicked. Agntree warns first if the target has uncommitted changes, and on a conflict it offers a terminal in the worktree so you can resolve and commit.
+**Merge Branch into This Worktree…** merges another worktree's branch into the one you right-clicked. It first confirms with the branch and worktree, the number of uncommitted files, and how many agent sessions are open in the worktree. On a conflict it offers a terminal in the worktree so you can resolve and commit.
 
-**Rebase onto Upstream…** fetches your remotes and rebases the worktree's branch onto the remote branch you pick. The first of `upstream/main`, `upstream/master`, `origin/main`, and `origin/master` that exists is recommended. Before it starts, Agntree shows which files would conflict and whether uncommitted changes will be stashed. If the rebase stops on a conflict, **Continue**, **Skip Commit**, and **Abort** appear in the Changes panel.
+**Rebase onto Upstream…** fetches your remotes and rebases the worktree's branch onto the remote branch you pick. The first of `upstream/main`, `upstream/master`, `origin/main`, and `origin/master` that exists is recommended. Before it starts, Agntree shows which files would conflict, whether uncommitted changes will be stashed, and how many sessions are open. If the rebase stops on a conflict, **Continue**, **Skip Commit**, and **Abort** appear in the Changes panel.
 
 ## Delete a worktree
 
-Right-click a worktree and choose **Delete Worktree…**. The confirmation says exactly what will be lost, and offers:
+Right-click a worktree and choose **Delete Worktree…**. The confirmation names the worktree, the number of uncommitted files, and the open agent sessions, and offers:
 
 - **Delete Worktree Only**, which keeps the branch, or
 - **Delete Worktree & Branch**.
 
-Deleting a worktree removes its directory from disk; it does not go to the Trash. If the worktree has uncommitted changes, the confirmation warns you and the buttons say **(force)**. Session rows under the worktree leave the list and their terminals close, but the agents keep the conversations. The main worktree cannot be deleted.
+Deleting a worktree moves its directory to the Trash and prunes git's records of it; emptying the Trash is what makes it permanent. A host without a usable Trash falls back to a permanent delete, and both the message and the Output log say so. Session rows under the worktree leave the list and their terminals close, but the agents keep the conversations. The main worktree cannot be deleted.
 
 ## Remove a Project from Agntree
 

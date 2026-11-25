@@ -96,7 +96,7 @@ Claude Code 2.1.310 or newer. Agntree relies on that version's session, fork, an
 
 ### Can I use the Claude Code or Codex chat panel instead of a terminal?
 
-Yes. A Claude Code or Codex session can open in its extension's chat panel, move back to a terminal, or start in the panel. Set `agntree.defaultSessionSurface` to make the panel the default. See [Agent panels](agent-panels.md).
+Yes. Clicking an existing session opens its extension's chat panel when it can, and **Open Session in Terminal** moves it back. New sessions start in a terminal unless `agntree.defaultSessionSurface` says **Agent's VS Code panel**. See [Agent panels](agent-panels.md).
 
 ### Does Agntree work with GitHub Copilot, Cline, or Aider?
 

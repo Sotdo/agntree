@@ -65,7 +65,7 @@ To skip the menu next time, choose **Set Default Agent…** in that same menu. F
 
 ## Come back to a session
 
-Close the terminal, or quit VS Code entirely. The session stays in the sidebar. Click its row and Agntree resumes it in the agent's own CLI, in the right directory, with the full conversation.
+Close the terminal, or quit VS Code entirely. The session stays in the sidebar. Click its row and Agntree opens it where it belongs: a tracked terminal or an open panel is focused, otherwise the agent's official panel opens, and the CLI is the fallback.
 
 Sessions you already had before installing Agntree show up too: Agntree lists recent sessions the agents hold for each folder you add. See [Sessions](sessions.md#sessions-started-outside-agntree).
 

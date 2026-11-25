@@ -46,11 +46,16 @@ A new session shows `new` until you send the first prompt. That is when the agen
 
 ## Resume a session
 
-Click the row. Agntree opens the agent's CLI in the session's worktree with its native session ID, so the conversation continues where it stopped.
+Click the row. Agntree opens the session where it belongs, in this order:
 
-- If the session is already open in a terminal, the click focuses that terminal.
-- If it is open in the Claude Code or Codex panel, the click reveals the panel instead of starting a second copy.
-- **Open Session in Terminal** on the row always uses the terminal.
+- If Agntree tracks a terminal for it, the click focuses that terminal.
+- If the Claude Code or Codex panel already shows it, the click reveals the panel.
+- Otherwise the click opens the agent's official panel, with its native session ID.
+- When no panel can open it, the click resumes the CLI in the worktree.
+
+**Open Session in Terminal** on the row always uses the terminal, and Agntree asks before closing an open panel. Both directions of a surface switch are refused while the agent is working, so the switch never kills a turn. See [Agent panels](agent-panels.md#what-a-click-opens).
+
+A session that Claude Code reports as running in another process is not resumed silently: Agntree offers **Copy Resume Command** or a confirmed **Start Another Process…**.
 
 To resume from outside VS Code, right-click the session and choose **Copy Resume Command**. It copies a command line that works from any terminal, for example `cd ~/code/storefront && claude --resume <id>`. See [Resume a session](guides/resume-a-session.md) for each agent's command.
 

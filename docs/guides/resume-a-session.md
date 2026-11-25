@@ -36,7 +36,7 @@ The hard part of resuming is usually finding the ID, and remembering which direc
 1. Open the Agntree sidebar.
 2. Click the session.
 
-Agntree opens the agent's own CLI in the right directory with the right session ID. The row shows the session's name and how long ago it was active, and its tooltip shows your last prompt and the agent's last reply, so you can tell sessions apart before opening one.
+Agntree opens the session where it belongs: a tracked terminal or an open panel is focused, otherwise the agent's own VS Code panel opens, and the CLI is the fallback. Either way it continues in the right directory with the right session ID. The row shows the session's name and how long ago it was active, and its tooltip shows your last prompt and the agent's last reply, so you can tell sessions apart before opening one.
 
 Sessions you started outside Agntree are listed as well. Agntree reads the sessions each agent already holds for the folders you add.
 

@@ -111,7 +111,7 @@ view-box`), which Chromium plays in tree-icon `background-image`; honor
 
 ### Tree Providers (`src/providers/`)
 
-- **WorkspacesTreeProvider** - Main sidebar tree: Repository → Worktree → Session hierarchy, with a plain folder standing in for a repository that has no worktrees of its own. Quiet by design: session rows show only a short relative time (`16m`, `2h`, `3d`) or `new`, a star, and the harness mark; the tooltip carries the session brief (last exchange, then message count/model/agent, skipping fields the harness does not provide — Claude supplies only summary, last exchange, and last activity). A harness whose previews are `lazy` (opencode) gets no tooltip at render time; `resolveTreeItem` fetches its preview when the row is hovered, so a render never starts an export and the adapter's own cache keeps hovering cheap. Session rows keep one stable order: newest first by `createdAt`. Opening, resuming, or starring a chat changes its mark and description but never its position, so the list does not jump under the cursor. Repository icons are neutral — `repo` for a git repository, `folder` for a plain folder; worktree color marks state only — amber for the focused worktree, blue for a PR checkout, green for the main worktree, neutral otherwise. A Project that is not in the managed workspace says `not in workspace`; the focused worktree comes from the per-workspace id `extension.ts` persists in `prepareWorktree()`, not from `workspaceFolders[0]`. Worktrees show `↑n`/`↓n` ahead/behind from `GitService.getAheadBehind()` (15s cache). Repository rows follow the stored array order; **Move Up** / **Move Down** swap a row with its nearest visible neighbor, so the order needs no field of its own.
+- **WorkspacesTreeProvider** - Main sidebar tree: Repository → Worktree → Session hierarchy, with a plain folder standing in for a repository that has no worktrees of its own. Quiet by design: session rows show only a short relative time (`16m`, `2h`, `3d`) or `new`, a star, and the harness mark; the tooltip carries the session brief (last exchange, then message count/model/agent, skipping fields the harness does not provide — Claude supplies only summary, last exchange, and last activity). A harness whose previews are `lazy` (opencode) gets no tooltip at render time; `resolveTreeItem` fetches its preview when the row is hovered, so a render never starts an export and the adapter's own cache keeps hovering cheap. Session rows keep one stable order: newest first by `createdAt`. Opening, resuming, or starring a chat changes its mark and description but never its position, so the list does not jump under the cursor. Repository icons are neutral — `repo` for a git repository, `folder` for a plain folder; worktree color marks state only — amber for the focused worktree, blue for a PR checkout, green for the main worktree, neutral otherwise. A Project that is not in the managed workspace says `not in workspace`; the focused worktree comes from the per-workspace id `extension.ts` persists in `prepareWorktree()`, not from `workspaceFolders[0]`. Worktrees show `↑n`/`↓n` ahead/behind from `GitService.getAheadBehind()` (15s cache). Repository rows follow the stored array order; **Move Up** / **Move Down** swap a row with its nearest visible neighbor, so the order needs no field of its own. A git Project also gets a collapsed, read-only **Branches** group after its worktrees: local branches from `GitService.getLocalBranches()` (15s cache, no remote-tracking refs), each mapped to the worktree that checks it out, with detached worktrees shown as their short `HEAD` commit from the porcelain listing. Rows without a worktree are drawn in `disabledForeground` and do nothing; a row with one focuses that worktree through the same selection path as a worktree row.
 The Changes and All Files panels show one worktree at a time. `extension.ts` owns that
 choice (`showWorktree()`) and one file watcher on the shown worktree that refreshes both
 panels.
@@ -123,7 +123,7 @@ panels.
 
 Commands are registered in `package.json` under `contributes.commands` and implemented in:
 - `repository.ts` - Add (with an explicit `git init` for a folder that is not a repository), remove, and clone Projects, reorder them, and manage workspace membership (**Add Project to Workspace**, **Remove Project from Workspace**, **Open Managed Workspace**)
-- `worktree.ts` - Create/delete worktrees, merge branches, open in new window, checkout PRs
+- `worktree.ts` - Create/delete worktrees, merge branches, open in new window, checkout PRs. Merge, rebase, delete, fork-with-changes (in `chat.ts`), and PR checkout confirm with the branch, worktree, uncommitted-file count, and open session count, and log the outcome ([ADR 0024](adr/0024-preflights-and-trash-delete.md))
 - `chat.ts` - Create/open/rename/delete/fork/star sessions and hand them between the terminal and an agent's VS Code UI. Per-harness commands (`agntree.new<Harness>Chat`, its `InTerminal`/`InUi` variants, and `agntree.open<Harness>Ui`) are registered from the harness registry, so this file names no harness.
 - `sessionImport.ts` - **Import Existing Sessions** for one worktree
 - `changes.ts` - Changes panel actions: diffs, stage/unstage, discard, and the rebase controls
@@ -496,17 +496,25 @@ worktrees only when a chat is actually waiting for a UI session.
 
 ### Choosing a session's surface
 
-`agntree.defaultSessionSurface` is read per click, so a settings change needs no reload.
-A row click resolves in this order: a live terminal is focused, an open native-UI tab is
-revealed, a pending UI placeholder explains that its session is still starting, the
-configured UI is used when `NativeUiCapability.checkAvailability()` allows it, and
-otherwise the terminal opens. **Show Starred Sessions** resolves through the same helper,
-so picking a starred row cannot start a CLI beside an open panel. The UI default is a
-preference, so an unavailable extension or another workspace folder falls back to the
-terminal; the explicit UI commands explain the reason instead. **Open Session in
+A row click resolves in this order: a tracked terminal is focused, an open native-UI tab
+is revealed, a pending UI placeholder explains that its session is still starting, a
+session the harness reports running outside Agntree gets a QuickPick (**Copy Resume
+Command** or a confirmed **Start Another Process…**), the official UI is used when
+`NativeUiCapability.checkAvailability()` allows it, and otherwise the terminal opens.
+`agntree.defaultSessionSurface` now only chooses where a **new** session starts; it is
+read when a session is created, not per click. **Show Starred Sessions** and **Go to Next
+Session That Needs You** resolve through the same helper, so none of them can start a CLI
+beside an open panel. An unavailable extension or another workspace folder falls back to
+the terminal; the explicit UI commands explain the reason instead. **Open Session in
 Terminal** is the reverse handoff: if the session is open in its UI tab, it confirms and
 calls the tracker's `closeSurface()` before launching the CLI, because two agent
 processes must not share one session.
+
+Both directions are refused while `SessionAttentionService.getTurnState(chat.id)` is
+`working` (an unknown state does not block), so a surface change cannot kill a running
+turn. The running-elsewhere check is `HarnessAdapter.isSessionRunning?()`; Claude answers
+from `claude agents --json` (with `ignoreEnabled` so turning off needs-input
+notifications does not disable the guard), and the other harnesses have no answer.
 
 `NativeUiCapability` owns the surface rules: `checkAvailability()` for an existing
 session, `checkNewSessionAvailability()` for a new one (Claude's first folder; Codex's
@@ -562,9 +570,13 @@ Deletion is narrow by design; the rules are in
   (or an explicit existence check) so a stale tree cannot truncate a file.
 - `GitService` runs git with argument arrays (no shell) and never runs a command with
   interpolated user input.
-- `GitService.forceRemoveWorktree()` is the only Node directory delete. It refuses the
-  filesystem root, the repository, the user's home, ancestors of those, and any path git does
-  not list as a worktree.
+- `GitService.forceRemoveWorktree()` is the only recursive Node delete, and it is reached only after the Trash and `git worktree remove` both fail. It refuses the filesystem root, the repository, the user's home, ancestors of those, and any path git does not list as a worktree.
+- Deleting a worktree moves its directory to the Trash
+  (`vscode.workspace.fs.delete(..., { useTrash: true })`) and then runs `git worktree prune`;
+  only a host without a usable Trash falls back to `GitService.removeWorktree()`, and the
+  success message and operation log say the delete was permanent. The confirmation names
+  the branch, the uncommitted-file count, and the open agent sessions
+  ([ADR 0024](adr/0024-preflights-and-trash-delete.md)).
 - Deleting a worktree removes its session rows (closing their terminals) without
   tombstones, and removing a workspace root does the same for each of its worktrees, so
   re-adding the folder can import the sessions again. The confirmation says so

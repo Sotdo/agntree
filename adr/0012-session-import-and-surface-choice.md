@@ -2,6 +2,7 @@
 
 - **Status:** Accepted
 - **Superseded in part by:** [0020](0020-archive-reversible-visibility.md) — automatic aging is off; Archive owns visibility.
+- **Superseded in part by:** [0023](0023-open-policy-and-surface-handoff.md) — `defaultSessionSurface` chooses where a new session starts; clicks prefer the official UI.
 - **Date:** 2026-10-29
 
 ## Context
