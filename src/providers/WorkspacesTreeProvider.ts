@@ -49,6 +49,8 @@ export class WorkspacesTreeProvider implements vscode.TreeDataProvider<Workspace
 
   private turnStateProvider: (chatId: string) => TurnState | undefined = () => undefined;
   private chatOpenProvider: (chat: ChatSession) => boolean;
+  private activeWorktreeId: () => string | undefined = () => undefined;
+  private isInWorkspace: (fsPath: string) => boolean = () => false;
 
   private repoWatchers: vscode.Disposable[] = [];
   private watchedRepoIds = '';
@@ -108,6 +110,16 @@ export class WorkspacesTreeProvider implements vscode.TreeDataProvider<Workspace
   /** The one "is this chat open" predicate: a live terminal or a mapped native-UI tab. */
   setChatOpenProvider(provider: (chat: ChatSession) => boolean): void {
     this.chatOpenProvider = provider;
+  }
+
+  /** The worktree Focus last selected, persisted across reloads. */
+  setActiveWorktreeProvider(provider: () => string | undefined): void {
+    this.activeWorktreeId = provider;
+  }
+
+  /** Whether a worktree folder is a member of the managed workspace. */
+  setWorkspaceMembershipProvider(provider: (fsPath: string) => boolean): void {
+    this.isInWorkspace = provider;
   }
 
   /** Re-render and re-list worktrees and PRs (debounced). */
@@ -227,10 +239,19 @@ export class WorkspacesTreeProvider implements vscode.TreeDataProvider<Workspace
       repo,
       canExpand ? vscode.TreeItemCollapsibleState.Collapsed : vscode.TreeItemCollapsibleState.None
     );
+    const primary = worktrees.find((worktree) => worktree.isMain) ?? worktrees[0];
+    const open = primary ? this.isInWorkspace(primary.path) : false;
     item.iconPath = new vscode.ThemeIcon(isGit ? 'repo' : 'folder', new vscode.ThemeColor('descriptionForeground'));
-    item.tooltip = isGit
-      ? repo.rootPath
-      : `${repo.rootPath}\n\nNot a git repository. Sessions run directly in this folder.`;
+    if (!open) {
+      item.description = 'not in workspace';
+    }
+    item.tooltip = [
+      repo.rootPath,
+      isGit ? '' : 'Not a git repository. Sessions run directly in this folder.',
+      open ? '' : 'Not in the managed workspace. Add it to open its worktrees in this window.',
+    ]
+      .filter(Boolean)
+      .join('\n\n');
     return item;
   }
 
@@ -250,11 +271,12 @@ export class WorkspacesTreeProvider implements vscode.TreeDataProvider<Workspace
 
   private worktreeRows(repo: Repository, worktrees: Worktree[]): WorkspaceTreeItem[] {
     const currentFolder = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+    const activeId = this.activeWorktreeId();
     const unknownPRs: string[] = [];
 
     const rows = worktrees.map((worktree) => {
       const item = this.worktreeItem(worktree, vscode.TreeItemCollapsibleState.Collapsed);
-      const isCurrent = currentFolder === worktree.path;
+      const isCurrent = activeId ? worktree.id === activeId : currentFolder === worktree.path;
       const checkedOutPR = this.storageService.getPRWorktree(worktree.id);
       const pr = this.gitHubService.getCachedPRInfo(repo.rootPath, worktree.name);
       if (pr === undefined) {
@@ -281,7 +303,7 @@ export class WorkspacesTreeProvider implements vscode.TreeDataProvider<Workspace
       if (description.length > 0) {
         item.description = description.join(' · ');
       }
-      item.tooltip = [worktree.path, isCurrent ? 'Active workspace' : '', pr ? `PR #${pr.number}: ${pr.title}` : '']
+      item.tooltip = [worktree.path, isCurrent ? 'Focused worktree' : '', pr ? `PR #${pr.number}: ${pr.title}` : '']
         .filter(Boolean)
         .join('\n\n');
       return item;

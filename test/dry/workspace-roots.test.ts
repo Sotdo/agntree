@@ -4,18 +4,24 @@ import { execFileSync } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
 import { GitService } from '../../src/services/GitService';
+import { ManagedWorkspaceService } from '../../src/services/ManagedWorkspaceService';
 import { registerRepositoryCommands } from '../../src/commands/repository';
-import { makeStorage, runCommand, shownMessages, stub, tempDir } from './support';
+import { makeStorage, runCommand, shown, shownMessages, stub, tempDir } from './support';
 
 beforeEach(() => stub.__reset());
 
-function setup() {
+function setup(t: { after(fn: () => void): void }) {
   const storage = makeStorage();
+  const managedWorkspace = new ManagedWorkspaceService(
+    { globalState: { get: () => undefined, update: async () => undefined } } as never,
+    tempDir(t)
+  );
   let refreshes = 0;
   const forgotten: string[] = [];
   registerRepositoryCommands({ subscriptions: [] } as never, {
     storageService: storage,
     gitService: new GitService(),
+    managedWorkspace,
     forgetWorktrees: (worktrees) => forgotten.push(...worktrees.map((worktree) => worktree.path)),
     refreshTree: () => refreshes++,
   });
@@ -25,10 +31,24 @@ function setup() {
     return shownMessages().at(-1);
   };
   const roots = () => storage.getRepositories().map((repo) => repo.name);
-  return { storage, add, roots, forgotten, refreshes: () => refreshes };
+  return { storage, add, roots, forgotten, managedWorkspace, refreshes: () => refreshes };
 }
 
-test('Add accepts a plain folder, adds a subdirectory as its repository root, and refuses a bare repository', async (t) => {
+/** A repository with one commit and one linked worktree, on disk. */
+function projectWithWorktree(t: { after(fn: () => void): void }) {
+  const scratch = tempDir(t);
+  const repoPath = path.join(scratch, 'app');
+  fs.mkdirSync(repoPath);
+  execFileSync('git', ['init', '-q', repoPath]);
+  execFileSync('git', ['-c', 'user.email=t@example.com', '-c', 'user.name=T', 'commit', '-q', '--allow-empty', '-m', 'init'], {
+    cwd: repoPath,
+  });
+  const linked = path.join(scratch, 'app-feature');
+  execFileSync('git', ['worktree', 'add', '-q', '-b', 'feature', linked], { cwd: repoPath });
+  return { scratch, repoPath, linked };
+}
+
+test('Add Project offers git init for a plain folder and refuses a bare repository', async (t) => {
   const scratch = tempDir(t);
   const plain = path.join(scratch, 'scratchpad');
   const repo = path.join(scratch, 'notes');
@@ -37,16 +57,37 @@ test('Add accepts a plain folder, adds a subdirectory as its repository root, an
   fs.mkdirSync(path.join(repo, 'src'), { recursive: true });
   execFileSync('git', ['init', '-q', repo]);
   execFileSync('git', ['init', '-q', '--bare', bare]);
-  const { add, roots } = setup();
+  const { add, roots } = setup(t);
 
-  assert.equal(await add(plain), 'Added folder: scratchpad');
-  assert.equal(await add(path.join(repo, 'src')), 'Added repository: notes');
+  // Declining the init leaves the folder out and creates nothing.
+  await add(plain);
+  assert.ok(shown('is not a git repository'));
+  assert.equal(fs.existsSync(path.join(plain, '.git')), false);
+  assert.deepEqual(roots(), []);
+
+  stub.__warningResponses.push('Initialize Git Repository');
+  assert.match((await add(plain)) ?? '', /^Added Project: scratchpad/);
+  assert.equal(fs.existsSync(path.join(plain, '.git')), true);
+  assert.match((await add(path.join(repo, 'src'))) ?? '', /^Added Project: notes/);
   assert.match((await add(bare)) ?? '', /not a working tree/);
   assert.deepEqual(roots(), ['scratchpad', 'notes']);
 });
 
-test('Move Up and Move Down reorder roots; a refused move explains itself without a refresh', async () => {
-  const { storage, roots, refreshes } = setup();
+test('Add Project to Workspace adds every worktree folder and Remove takes them out', async (t) => {
+  const { repoPath, linked } = projectWithWorktree(t);
+  const { storage, add, managedWorkspace } = setup(t);
+  await add(repoPath);
+  const row = { itemType: 'repository', data: storage.getRepositories()[0] };
+
+  await runCommand('agntree.addToWorkspace', row);
+  assert.deepEqual([...managedWorkspace.folderPaths].sort(), [repoPath, linked].sort());
+
+  await runCommand('agntree.removeFromWorkspace', row);
+  assert.deepEqual([...managedWorkspace.folderPaths], []);
+});
+
+test('Move Up and Move Down reorder roots; a refused move explains itself without a refresh', async (t) => {
+  const { storage, roots, refreshes } = setup(t);
   const first = storage.addRepository('first', '/first');
   storage.addRepository('second', '/second');
   const row = { itemType: 'repository', data: first };
@@ -62,24 +103,21 @@ test('Move Up and Move Down reorder roots; a refused move explains itself withou
   assert.equal(shownMessages().at(-1), '"first" is already at the top.');
 });
 
-test('Remove forgets every worktree of the root, so re-adding the folder can import its sessions again', async (t) => {
-  const scratch = tempDir(t);
-  const repo = path.join(scratch, 'app');
-  fs.mkdirSync(repo);
-  execFileSync('git', ['init', '-q', repo]);
-  execFileSync('git', ['-c', 'user.email=t@example.com', '-c', 'user.name=T', 'commit', '-q', '--allow-empty', '-m', 'init'], { cwd: repo });
-  const linked = path.join(scratch, 'app-feature');
-  execFileSync('git', ['worktree', 'add', '-q', '-b', 'feature', linked], { cwd: repo });
-  const { storage, add, roots, forgotten } = setup();
-  await add(repo);
+test('Remove forgets every worktree of the Project and drops its folders from the workspace', async (t) => {
+  const { repoPath, linked } = projectWithWorktree(t);
+  const { storage, add, roots, forgotten, managedWorkspace } = setup(t);
+  await add(repoPath);
   const row = { itemType: 'repository', data: storage.getRepositories()[0] };
+  await runCommand('agntree.addToWorkspace', row);
 
   await runCommand('agntree.removeRepository', row);
   assert.deepEqual(roots(), ['app'], 'nothing changes without confirmation');
   assert.deepEqual(forgotten, []);
+  assert.deepEqual([...managedWorkspace.folderPaths].sort(), [repoPath, linked].sort());
 
   stub.__warningResponses.push('Remove');
   await runCommand('agntree.removeRepository', row);
   assert.deepEqual(roots(), []);
-  assert.deepEqual(forgotten.map((p) => fs.realpathSync(p)).sort(), [fs.realpathSync(repo), fs.realpathSync(linked)].sort());
+  assert.deepEqual(forgotten.map((p) => fs.realpathSync(p)).sort(), [fs.realpathSync(repoPath), fs.realpathSync(linked)].sort());
+  assert.deepEqual([...managedWorkspace.folderPaths], []);
 });

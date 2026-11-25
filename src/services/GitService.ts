@@ -94,6 +94,12 @@ export class GitService {
     return this.output(['rev-parse', '--show-toplevel'], dirPath);
   }
 
+  /** Initialize a repository in `dirPath`, using git's configured default branch. */
+  initRepository(dirPath: string): GitOutcome {
+    const branch = this.output(['config', '--get', 'init.defaultBranch'], dirPath) || 'main';
+    return this.attempt(['init', '-b', branch], dirPath, 'Initialize repository');
+  }
+
   listWorktrees(repoPath: string, repoId: string): Worktree[] {
     return this.parseWorktrees(repoPath, repoId) ?? [];
   }

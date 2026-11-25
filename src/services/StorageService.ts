@@ -321,22 +321,39 @@ export class StorageService {
     return this.getChats().filter((c) => starredIds.has(c.id));
   }
 
+  // Focused worktree
+
+  /**
+   * The worktree Focus selected, keyed by the workspace that showed it, so a
+   * second window does not inherit another window's Focus.
+   */
+  getActiveWorktreeId(): string | undefined {
+    return this.get<Record<string, string>>(STORAGE_KEYS.ACTIVE_WORKTREE, {})[this.workspaceKey()];
+  }
+
+  setActiveWorktreeId(worktreeId: string): void {
+    void this.set(STORAGE_KEYS.ACTIVE_WORKTREE, {
+      ...this.get<Record<string, string>>(STORAGE_KEYS.ACTIVE_WORKTREE, {}),
+      [this.workspaceKey()]: worktreeId,
+    });
+  }
+
   // Restored terminals (ADR 0009)
 
   /**
-   * The workspace folder whose terminals this window owns. Agntree keeps one
-   * workspace folder per window (`autoSwitchWorkspaceFolder` replaces the
-   * folder list), so the first folder identifies the workspace.
+   * The workspace this window shows. A managed multi-root window is
+   * identified by its workspace file; a single-folder window falls back to
+   * its folder. Used for terminal identity and for the focused worktree.
    */
   private workspaceKey(): string {
-    return vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? '';
+    return vscode.workspace.workspaceFile?.fsPath ?? vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? '';
   }
 
   /**
-   * Recorded terminal PIDs by workspace folder. Kept in `globalState`, not
-   * `workspaceState`: switching the workspace folder gives VS Code a fresh
-   * workspace store, which would erase the identity of the terminals Agntree
-   * left running.
+   * Recorded terminal PIDs by workspace. Kept in `globalState`, not
+   * `workspaceState`: switching the workspace gives VS Code a fresh workspace
+   * store, which would erase the identity of the terminals Agntree left
+   * running.
    */
   private getTerminalPidRecords(): Record<string, Record<string, number>> {
     return this.get<Record<string, Record<string, number>>>(STORAGE_KEYS.TERMINAL_PIDS, {});
@@ -352,6 +369,15 @@ export class StorageService {
     const records = this.getTerminalPidRecords();
     if (records[key]) {
       return records[key];
+    }
+
+    // A window that just converted from a single folder to the managed
+    // workspace keeps adopting the agent it launched before the conversion.
+    const folderKey = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+    const folderPids = folderKey && folderKey !== key ? records[folderKey] : undefined;
+    if (folderPids) {
+      void this.set(STORAGE_KEYS.TERMINAL_PIDS, { ...records, [key]: folderPids });
+      return folderPids;
     }
 
     // One-time migration from the workspace-scoped shape of earlier builds.

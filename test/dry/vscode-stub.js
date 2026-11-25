@@ -273,6 +273,7 @@ const executionStartListeners = new Set();
 const tabChangeListeners = new Set();
 const tabGroupChangeListeners = new Set();
 const configurationChangeListeners = new Set();
+const workspaceFolderListeners = new Set();
 let activeTerminal;
 let nextTerminalPid = 4100;
 let silentExecutionEvents = false;
@@ -340,7 +341,23 @@ module.exports = {
     },
     getConfiguration: () => configuration,
     workspaceFolders: [],
+    workspaceFile: undefined,
     createFileSystemWatcher: (pattern) => new FakeWatcher(pattern),
+    onDidChangeWorkspaceFolders: (listener) => {
+      workspaceFolderListeners.add(listener);
+      return { dispose: () => workspaceFolderListeners.delete(listener) };
+    },
+    /** Edits the stub's folder list and notifies listeners, like the real host. */
+    updateWorkspaceFolders: (start, deleteCount, ...foldersToAdd) => {
+      const folders = module.exports.workspace.workspaceFolders;
+      folders.splice(start, deleteCount ?? 0);
+      const added = foldersToAdd.map(({ uri, name }) => ({ uri, name: name ?? uri.fsPath }));
+      folders.splice(start, 0, ...added);
+      for (const listener of workspaceFolderListeners) {
+        listener({ added, removed: [] });
+      }
+      return true;
+    },
     onDidChangeConfiguration: (listener) => {
       configurationChangeListeners.add(listener);
       return {
@@ -505,6 +522,7 @@ module.exports = {
     all: [],
   },
   env: {
+    remoteName: undefined,
     clipboard: {
       writeText: async (text) => {
         clipboardText = text;
@@ -562,6 +580,7 @@ module.exports = {
       tabChangeListeners,
       tabGroupChangeListeners,
       configurationChangeListeners,
+      workspaceFolderListeners,
       extensionChangeListeners,
       installedExtensions,
     ]) {
@@ -576,6 +595,8 @@ module.exports = {
     openExternalResult = true;
     nextTerminalPid = 4100;
     module.exports.workspace.workspaceFolders = [];
+    module.exports.workspace.workspaceFile = undefined;
+    module.exports.env.remoteName = undefined;
     module.exports.window.tabGroups.all = [];
   },
   __deleted: deletedUris,

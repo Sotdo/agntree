@@ -105,6 +105,8 @@ export const STORAGE_KEYS = {
   REPOSITORIES: 'agntree.repositories',
   CHATS: 'agntree.chats',
   ACTIVE_CHAT: 'agntree.activeChat',
+  /** The worktree the tree and panels follow, across reloads. */
+  ACTIVE_WORKTREE: 'agntree.activeWorktree',
   PR_WORKTREES: 'agntree.prWorktrees',
   STARRED_CHATS: 'agntree.starredChats',
   /**

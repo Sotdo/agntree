@@ -15,7 +15,8 @@ import { HarnessWatcherRegistry } from './services/HarnessWatcherRegistry';
 import { SessionImportService } from './services/SessionImportService';
 import { NotificationService } from './services/NotificationService';
 import { SessionAttentionService } from './services/SessionAttentionService';
-import { disposeOperationLog } from './services/OperationLog';
+import { ManagedWorkspaceService } from './services/ManagedWorkspaceService';
+import { disposeOperationLog, logOperation } from './services/OperationLog';
 import { ClaudeHarness } from './harnesses/ClaudeHarness';
 import { OpencodeHarness } from './harnesses/OpencodeHarness';
 import { CodexHarness } from './harnesses/CodexHarness';
@@ -47,6 +48,13 @@ export async function activate(context: vscode.ExtensionContext) {
   const storageService = new StorageService(context);
   const gitService = new GitService();
   const worktreeCatalog = new WorktreeCatalog(storageService, gitService);
+  const managedWorkspace = new ManagedWorkspaceService(context);
+  await managedWorkspace.load().catch((error: unknown) => {
+    logOperation(`Could not read the managed workspace: ${error instanceof Error ? error.message : String(error)}`);
+    vscode.window.showWarningMessage(
+      `Agntree could not read ${managedWorkspace.workspaceFilePath}. Add to Workspace and Remove from Workspace are unavailable until it is fixed.`
+    );
+  });
   const gitHubService = new GitHubService();
   const opencodeHarness = new OpencodeHarness();
   const codexHarness = new CodexHarness();
@@ -129,6 +137,8 @@ export async function activate(context: vscode.ExtensionContext) {
     context.extensionUri
   );
   workspacesProvider.setChatOpenProvider(isChatOpen);
+  workspacesProvider.setWorkspaceMembershipProvider((fsPath) => managedWorkspace.has(fsPath));
+  workspacesProvider.setActiveWorktreeProvider(() => storageService.getActiveWorktreeId());
 
   // Reconcile terminals that survived a reload or a quit (ADR 0009). Adoption
   // must finish before a click can open a chat; resuming revived tabs asks
@@ -186,6 +196,29 @@ export async function activate(context: vscode.ExtensionContext) {
     filesTreeView.title = `All Files${suffix}`;
   };
 
+  /**
+   * Focus a worktree: the Changes and All Files panels follow it, and its id
+   * is what the tree marks and activation restores. Selecting a worktree or
+   * opening one of its sessions also moves its folder first, so the Claude
+   * Code UI, which runs in the first folder, opens in the right place. A
+   * single-folder window and a worktree outside the managed workspace are
+   * left alone.
+   */
+  const focusWorktree = async (worktree: Worktree, options: { reorder: boolean }): Promise<void> => {
+    showWorktree(worktree);
+    if (storageService.getActiveWorktreeId() !== worktree.id) {
+      storageService.setActiveWorktreeId(worktree.id);
+    }
+    if (!options.reorder) {
+      return;
+    }
+    await managedWorkspace.reorderToFirst(worktree.path).catch((error: unknown) => {
+      logOperation(
+        `Could not focus "${worktree.name}" in the managed workspace: ${error instanceof Error ? error.message : String(error)}`
+      );
+    });
+  };
+
   /** Close chats' terminals and delete their rows; a removed selection is cleared. */
   const removeChats = (chatIds: string[], options?: { rememberSession?: boolean }): string[] => {
     chatIds.forEach((id) => terminalManager.closeChat(id));
@@ -213,13 +246,6 @@ export async function activate(context: vscode.ExtensionContext) {
     }
   };
 
-  const switchWorkspaceFolder = (folderPath: string): void => {
-    const folders = vscode.workspace.workspaceFolders ?? [];
-    if (folders[0]?.uri.fsPath !== folderPath) {
-      vscode.workspace.updateWorkspaceFolders(0, folders.length, { uri: vscode.Uri.file(folderPath) });
-    }
-  };
-
   /** Set once the attention service exists; visiting a chat clears its needs-you flag. */
   let markChatSeen: (chatId: string) => void = () => undefined;
 
@@ -231,7 +257,7 @@ export async function activate(context: vscode.ExtensionContext) {
     }
     const worktree = workspacesProvider.getWorktreeById(chat.worktreeId);
     if (worktree) {
-      showWorktree(worktree);
+      void focusWorktree(worktree, { reorder: true });
     }
     if (options.revealIfHidden || workspacesTreeView.visible) {
       void workspacesTreeView
@@ -288,14 +314,20 @@ export async function activate(context: vscode.ExtensionContext) {
   workspacesProvider.setTurnStateProvider((chatId) => attentionService.getTurnState(chatId));
 
   // Commands
-  registerRepositoryCommands(context, { storageService, gitService, forgetWorktrees, refreshTree });
+  registerRepositoryCommands(context, {
+    storageService,
+    gitService,
+    managedWorkspace,
+    forgetWorktrees,
+    refreshTree,
+  });
   registerWorktreeCommands(context, {
     storageService,
     gitService,
     gitHubService,
+    managedWorkspace,
     workspacesProvider,
     forgetWorktrees,
-    switchWorkspaceFolder,
     refreshTree,
   });
   registerChatCommands(context, {
@@ -310,6 +342,7 @@ export async function activate(context: vscode.ExtensionContext) {
     selectedRows: () => workspacesTreeView.selection,
     activeWorktree: () => shownWorktree,
     activateChat,
+    prepareWorktree: (worktree) => focusWorktree(worktree, { reorder: true }),
     showWorktree,
     removeChats,
     refreshTree,
@@ -329,16 +362,11 @@ export async function activate(context: vscode.ExtensionContext) {
   register('agntree.openSettings', () =>
     vscode.commands.executeCommand('workbench.action.openSettings', `@ext:${context.extension.id}`)
   );
-  for (const [name, setting, label] of [
-    ['AutoSwitch', 'autoSwitchWorkspaceFolder', 'Auto-switch workspace folder'],
-    ['FocusOnStartup', 'focusOnStartup', 'Focus on startup'],
-  ]) {
-    for (const enabled of [true, false]) {
-      register(`agntree.${enabled ? 'enable' : 'disable'}${name}`, async () => {
-        await config().update(setting, enabled, vscode.ConfigurationTarget.Global);
-        vscode.window.showInformationMessage(`${label} ${enabled ? 'enabled' : 'disabled'}`);
-      });
-    }
+  for (const enabled of [true, false]) {
+    register(`agntree.${enabled ? 'enable' : 'disable'}FocusOnStartup`, async () => {
+      await config().update('focusOnStartup', enabled, vscode.ConfigurationTarget.Global);
+      vscode.window.showInformationMessage(`Focus on startup ${enabled ? 'enabled' : 'disabled'}`);
+    });
   }
 
   // Follow focus: a terminal, an editor terminal tab, or a native-UI tab
@@ -390,25 +418,22 @@ export async function activate(context: vscode.ExtensionContext) {
       if (!selected || others.length > 0) {
         return;
       }
-      let worktree: Worktree | undefined;
       if (selected.itemType === 'chat') {
         const chat = selected.data as ChatSession;
         markChatSeen(chat.id);
         storageService.setActiveChatId(chat.id);
-        worktree = workspacesProvider.getWorktreeById(chat.worktreeId);
-      } else {
-        // A plain folder row stands in for its root worktree; a git
-        // repository row has none.
-        worktree = workspacesProvider.getWorktreeForItem(selected);
-      }
-      if (!worktree) {
+        const worktree = workspacesProvider.getWorktreeById(chat.worktreeId);
+        if (worktree) {
+          // Browsing rows moves Focus but does not reorder the workspace.
+          void focusWorktree(worktree, { reorder: false });
+        }
         return;
       }
-      showWorktree(worktree);
-      // Switching the folder restarts the extension host; activation then
-      // restores this worktree from the new first folder.
-      if (config().get<boolean>('autoSwitchWorkspaceFolder', false)) {
-        switchWorkspaceFolder(worktree.path);
+      // A plain folder row stands in for its root worktree; a git repository
+      // row has none.
+      const worktree = workspacesProvider.getWorktreeForItem(selected);
+      if (worktree) {
+        void focusWorktree(worktree, { reorder: true });
       }
     })
   );
@@ -419,10 +444,28 @@ export async function activate(context: vscode.ExtensionContext) {
     }
   }
 
-  // Start on the worktree that matches the open workspace folder. Reveal is
-  // best-effort: the row may not have rendered yet.
+  // The workspace file is the membership list; a folder added or removed in
+  // VS Code's own UI must show up in the tree without a reload.
+  context.subscriptions.push(
+    vscode.workspace.onDidChangeWorkspaceFolders(() => {
+      void managedWorkspace.load().catch((error: unknown) => {
+        logOperation(
+          `Could not reread the managed workspace: ${error instanceof Error ? error.message : String(error)}`
+        );
+      });
+      refreshTree();
+    })
+  );
+  void managedWorkspace.promptOnce();
+
+  // Start on the worktree Focus last selected, or on the one that matches the
+  // first workspace folder. Reveal is best-effort: the row may not have
+  // rendered yet.
+  const activeWorktreeId = storageService.getActiveWorktreeId();
   const folderPath = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
-  const startWorktree = folderPath ? workspacesProvider.findWorktreeByPath(folderPath) : undefined;
+  const startWorktree =
+    (activeWorktreeId ? workspacesProvider.getWorktreeById(activeWorktreeId) : undefined) ??
+    (folderPath ? workspacesProvider.findWorktreeByPath(folderPath) : undefined);
   if (startWorktree) {
     showWorktree(startWorktree);
     const reveal = () =>

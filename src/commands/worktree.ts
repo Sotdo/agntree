@@ -2,19 +2,21 @@ import * as vscode from 'vscode';
 import { StorageService } from '../services/StorageService';
 import { GitService, recommendedRebaseTarget } from '../services/GitService';
 import { GitHubService } from '../services/GitHubService';
+import { ManagedWorkspaceService } from '../services/ManagedWorkspaceService';
 import { WorkspaceTreeItem, WorkspacesTreeProvider } from '../providers/WorkspacesTreeProvider';
 import { Repository, Worktree } from '../types';
 import { logOperation } from '../services/OperationLog';
+import { hostUri } from '../utils/hostUri';
 import { commandRegistrar, defaultWorktreePath, promptNewBranchName, withProgress } from './common';
 
 export interface WorktreeCommandDeps {
   storageService: StorageService;
   gitService: GitService;
   gitHubService: GitHubService;
+  managedWorkspace: ManagedWorkspaceService;
   workspacesProvider: Pick<WorkspacesTreeProvider, 'getWorktreeForItem' | 'isGitRepo' | 'getPRUrl'>;
   /** Remove a deleted worktree's chats and clear the panels if they show it. */
   forgetWorktrees: (worktrees: Worktree[]) => void;
-  switchWorkspaceFolder: (folderPath: string) => void;
   refreshTree: () => void;
 }
 
@@ -23,7 +25,7 @@ export interface WorktreeCommandDeps {
  * small open/copy/switch actions on a worktree row.
  */
 export function registerWorktreeCommands(context: vscode.ExtensionContext, deps: WorktreeCommandDeps): void {
-  const { storageService, gitService, gitHubService, workspacesProvider, refreshTree } = deps;
+  const { storageService, gitService, gitHubService, managedWorkspace, workspacesProvider, refreshTree } = deps;
   const register = commandRegistrar(context);
 
   /** The selected repository row, or a choice among the git repositories. */
@@ -125,6 +127,14 @@ export function registerWorktreeCommands(context: vscode.ExtensionContext, deps:
       ? gitService.createWorktreeWithNewBranch(repo.rootPath, branch, worktreePath, base)
       : gitService.createWorktree(repo.rootPath, branch, worktreePath);
     if (created) {
+      const primary = gitService.listWorktrees(repo.rootPath, repo.id).find((worktree) => worktree.isMain);
+      if (primary && managedWorkspace.has(primary.path)) {
+        await managedWorkspace.add([worktreePath]).catch((error: unknown) => {
+          logOperation(
+            `Created worktree "${branch}" but could not add it to the managed workspace: ${error instanceof Error ? error.message : String(error)}`
+          );
+        });
+      }
       vscode.window.showInformationMessage(`Created worktree: ${branch}`);
       refreshTree();
     } else {
@@ -135,7 +145,7 @@ export function registerWorktreeCommands(context: vscode.ExtensionContext, deps:
   register('agntree.openInNewWindow', async (item?: WorkspaceTreeItem) => {
     const worktree = workspacesProvider.getWorktreeForItem(item);
     if (worktree) {
-      await vscode.commands.executeCommand('vscode.openFolder', vscode.Uri.file(worktree.path), {
+      await vscode.commands.executeCommand('vscode.openFolder', hostUri(worktree.path), {
         forceNewWindow: true,
       });
     }
@@ -153,13 +163,6 @@ export function registerWorktreeCommands(context: vscode.ExtensionContext, deps:
     const worktree = workspacesProvider.getWorktreeForItem(item);
     if (worktree) {
       openTerminal(`Terminal: ${worktree.name}`, worktree.path);
-    }
-  });
-
-  register('agntree.switchToWorkspace', (item?: WorkspaceTreeItem) => {
-    const worktree = workspacesProvider.getWorktreeForItem(item);
-    if (worktree) {
-      deps.switchWorkspaceFolder(worktree.path);
     }
   });
 
@@ -218,6 +221,11 @@ export function registerWorktreeCommands(context: vscode.ExtensionContext, deps:
       vscode.window.showErrorMessage('Failed to delete worktree. Check the Output panel for details.');
       return;
     }
+    await managedWorkspace.remove([worktree.path]).catch((error: unknown) => {
+      logOperation(
+        `Failed to remove the deleted worktree from the managed workspace: ${error instanceof Error ? error.message : String(error)}`
+      );
+    });
     logOperation(
       `Deleted worktree "${worktree.name}" at ${worktree.path}` +
         (branch && deleteBranch ? ` and branch "${branch}"` : '')

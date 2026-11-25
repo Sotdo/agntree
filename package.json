@@ -67,6 +67,9 @@
     "onStartupFinished"
   ],
   "main": "./out/extension.js",
+  "extensionKind": [
+    "workspace"
+  ],
   "contributes": {
     "viewsContainers": {
       "activitybar": [
@@ -81,7 +84,7 @@
       "agntree": [
         {
           "id": "agntree.workspacesView",
-          "name": "Workspaces",
+          "name": "Projects",
           "size": 4
         },
         {
@@ -99,7 +102,7 @@
     "viewsWelcome": [
       {
         "view": "agntree.workspacesView",
-        "contents": "Start managing your Claude Code, opencode, Codex, and Pi sessions across folders, repositories, and worktrees.\n\n[Add Local Folder or Repository](command:agntree.addRepository)\n[Clone from GitHub](command:agntree.cloneRepository)\n\nAdd any local folder, or clone a repository from GitHub to get started."
+        "contents": "Start managing your Claude Code, opencode, Codex, and Pi sessions across the worktrees of your Projects.\n\n[Add Project](command:agntree.addRepository)\n[Clone from GitHub](command:agntree.cloneRepository)\n[Open Managed Workspace](command:agntree.openManagedWorkspace)\n\nA Project is a git repository Agntree manages. The managed workspace holds every worktree of your Open Projects in this window."
       },
       {
         "view": "agntree.changesView",
@@ -188,7 +191,7 @@
       },
       {
         "command": "agntree.addRepository",
-        "title": "Add Local Folder or Repository…",
+        "title": "Add Project…",
         "category": "Agntree",
         "icon": "$(folder)"
       },
@@ -200,9 +203,27 @@
       },
       {
         "command": "agntree.removeRepository",
-        "title": "Remove from Agntree…",
+        "title": "Remove Project from Agntree…",
         "category": "Agntree",
         "icon": "$(close)"
+      },
+      {
+        "command": "agntree.addToWorkspace",
+        "title": "Add Project to Workspace",
+        "category": "Agntree",
+        "icon": "$(add)"
+      },
+      {
+        "command": "agntree.removeFromWorkspace",
+        "title": "Remove Project from Workspace",
+        "category": "Agntree",
+        "icon": "$(remove)"
+      },
+      {
+        "command": "agntree.openManagedWorkspace",
+        "title": "Open Managed Workspace",
+        "category": "Agntree",
+        "icon": "$(folder-opened)"
       },
       {
         "command": "agntree.moveRepositoryUp",
@@ -367,12 +388,6 @@
         "icon": "$(multiple-windows)"
       },
       {
-        "command": "agntree.switchToWorkspace",
-        "title": "Open in This Window",
-        "category": "Agntree",
-        "icon": "$(target)"
-      },
-      {
         "command": "agntree.importSessions",
         "title": "Import Existing Sessions…",
         "category": "Agntree",
@@ -389,18 +404,6 @@
         "title": "Agntree Keyboard Shortcuts…",
         "category": "Agntree",
         "icon": "$(keyboard)"
-      },
-      {
-        "command": "agntree.disableAutoSwitch",
-        "title": "Turn Off Auto-Switch Workspace Folder",
-        "category": "Agntree",
-        "icon": "$(sync)"
-      },
-      {
-        "command": "agntree.enableAutoSwitch",
-        "title": "Turn On Auto-Switch Workspace Folder",
-        "category": "Agntree",
-        "icon": "$(sync-ignored)"
       },
       {
         "command": "agntree.disableFocusOnStartup",
@@ -729,17 +732,11 @@
         "title": "Window",
         "order": 3,
         "properties": {
-          "agntree.autoSwitchWorkspaceFolder": {
-            "type": "boolean",
-            "default": false,
-            "markdownDescription": "When you select a worktree or session in another repository, make that folder the one VS Code has open, so the Explorer, search, and source control follow it. VS Code restarts its extensions on each switch, which shows as a brief flicker. With this off, use **Open in This Window** on a worktree's right-click menu.",
-            "order": 1
-          },
           "agntree.focusOnStartup": {
             "type": "boolean",
             "default": false,
             "markdownDescription": "Open the Agntree sidebar when VS Code starts, instead of the File Explorer.",
-            "order": 2
+            "order": 1
           }
         }
       },
@@ -798,14 +795,9 @@
           "group": "2_settings@0"
         },
         {
-          "command": "agntree.disableAutoSwitch",
-          "when": "view == agntree.workspacesView && config.agntree.autoSwitchWorkspaceFolder",
-          "group": "2_settings@1"
-        },
-        {
-          "command": "agntree.enableAutoSwitch",
-          "when": "view == agntree.workspacesView && !config.agntree.autoSwitchWorkspaceFolder",
-          "group": "2_settings@1"
+          "command": "agntree.openManagedWorkspace",
+          "when": "view == agntree.workspacesView",
+          "group": "0_add@0"
         },
         {
           "command": "agntree.disableFocusOnStartup",
@@ -905,6 +897,16 @@
           "group": "9_destructive@9"
         },
         {
+          "command": "agntree.addToWorkspace",
+          "when": "view == agntree.workspacesView && viewItem =~ /^(repository|folderRepository)$/",
+          "group": "1_create@3"
+        },
+        {
+          "command": "agntree.removeFromWorkspace",
+          "when": "view == agntree.workspacesView && viewItem =~ /^(repository|folderRepository)$/",
+          "group": "1_create@4"
+        },
+        {
           "submenu": "agntree.newSession",
           "when": "view == agntree.workspacesView && viewItem =~ /^(worktree|folderRepository)$/ && (agntree.anyHarnessInstalled || agntree.anyNativeUiInstalled) && !config.agntree.defaultHarness",
           "group": "inline@1"
@@ -928,11 +930,6 @@
           "command": "agntree.importSessions",
           "when": "view == agntree.workspacesView && viewItem =~ /^(worktree|folderRepository)$/",
           "group": "1_session@2"
-        },
-        {
-          "command": "agntree.switchToWorkspace",
-          "when": "view == agntree.workspacesView && viewItem =~ /^(worktree|folderRepository)$/ && !config.agntree.autoSwitchWorkspaceFolder",
-          "group": "2_open@1"
         },
         {
           "command": "agntree.openInNewWindow",
@@ -1366,7 +1363,11 @@
           "when": "false"
         },
         {
-          "command": "agntree.switchToWorkspace",
+          "command": "agntree.addToWorkspace",
+          "when": "false"
+        },
+        {
+          "command": "agntree.removeFromWorkspace",
           "when": "false"
         },
         {
@@ -1428,14 +1429,6 @@
         {
           "command": "agntree.openDiff",
           "when": "false"
-        },
-        {
-          "command": "agntree.disableAutoSwitch",
-          "when": "config.agntree.autoSwitchWorkspaceFolder"
-        },
-        {
-          "command": "agntree.enableAutoSwitch",
-          "when": "!config.agntree.autoSwitchWorkspaceFolder"
         },
         {
           "command": "agntree.disableFocusOnStartup",

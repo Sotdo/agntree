@@ -17,6 +17,7 @@ import {
 import { DEFAULT_CHAT_NAME, chatPrimarySessionId } from '../harnesses/sessionUtils';
 import { errorMessage, formatRelativeTime, nextForkName } from '../utils/text';
 import { canonicalPath } from '../utils/paths';
+import { hostUri } from '../utils/hostUri';
 import { quoteShellArgument } from '../harnesses/commandUtils';
 import {
   commandRegistrar,
@@ -50,6 +51,8 @@ export interface ChatCommandDeps {
   activateChat: (chat: ChatSession) => void;
   /** Point the Changes and Files panels at a worktree. */
   showWorktree: (worktree: Worktree) => void;
+  /** Point the panels at a worktree and move it first in the managed workspace. */
+  prepareWorktree: (worktree: Worktree) => Promise<void>;
   /** Close chats' terminals, delete their rows, and clear the selection if it was one of them. */
   removeChats: (chatIds: string[], options?: { rememberSession?: boolean }) => string[];
   refreshTree: () => void;
@@ -78,6 +81,7 @@ export function registerChatCommands(
     selectedRows,
     activeWorktree,
     activateChat,
+    prepareWorktree,
     showWorktree,
     removeChats,
     refreshTree,
@@ -249,6 +253,9 @@ export function registerChatCommands(
     // plain New Session command follows the configured default.
     const nativeUi = (surface ?? defaultSessionSurface()) === 'ui' ? adapter.nativeUi : undefined;
     if (nativeUi) {
+      // Focus first: the Claude UI opens in the first workspace folder, and
+      // the availability check below reads that order.
+      await prepareWorktree(worktree);
       const availability = nativeUi.checkNewSessionAvailability(worktree.path);
       if (availability.kind === 'available') {
         await startSessionInNativeUi(worktree, harness, nativeUi);
@@ -294,6 +301,7 @@ export function registerChatCommands(
       await explainNativeUiUnavailable(nativeUi, worktree.path, { kind: 'not-installed' });
       return;
     }
+    await prepareWorktree(worktree);
 
     // The UI extensions cannot adopt a chosen ID, so the handoff only covers a
     // session that already exists natively.
@@ -395,6 +403,8 @@ export function registerChatCommands(
    * session".
    */
   const openChatPrimary = async (chat: ChatSession, worktree: Worktree): Promise<void> => {
+    // Focus first so a UI default sees this worktree as the first folder.
+    await prepareWorktree(worktree);
     const nativeUi = harnessRegistry.get(chat.harness).nativeUi;
     const sessionId = chatPrimarySessionId(chat);
     const terminalOpen = terminalManager.isActive(chat.id);
@@ -1020,7 +1030,7 @@ async function explainNativeUiUnavailable(
       const choice = await vscode.window.showWarningMessage(message, 'Open in New Window');
       if (choice === 'Open in New Window') {
         try {
-          await vscode.commands.executeCommand('vscode.openFolder', vscode.Uri.file(worktreePath), {
+          await vscode.commands.executeCommand('vscode.openFolder', hostUri(worktreePath), {
             forceNewWindow: true,
           });
         } catch (error) {

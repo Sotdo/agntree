@@ -115,6 +115,8 @@ function setup(t: { after(fn: () => void): void }, options: { notInstalled?: Har
   });
 
   const context = { subscriptions: [], extensionUri: vscode.Uri.file('/extension') } as never;
+  /** What the extension's Focus preparation would do before a UI handoff. */
+  const prepare = { calls: [] as string[], hook: undefined as ((worktree: Worktree) => void) | undefined };
   registerChatCommands(context, {
     storageService: storage,
     gitService: git as never,
@@ -127,6 +129,10 @@ function setup(t: { after(fn: () => void): void }, options: { notInstalled?: Har
     selectedRows: () => selectedRows,
     activeWorktree: () => active.worktree,
     activateChat: (chat) => activated.push(chat.id),
+    prepareWorktree: async (worktree) => {
+      prepare.calls.push(worktree.id);
+      prepare.hook?.(worktree);
+    },
     showWorktree: (worktree) => shown.push(worktree.id),
     removeChats: (ids, options) => {
       ids.forEach((id) => terminals.closeChat(id));
@@ -139,7 +145,7 @@ function setup(t: { after(fn: () => void): void }, options: { notInstalled?: Har
 
   return {
     storage, main, feature, folder, folderRepo, worktrees, missing, sessions, adapters, terminals,
-    claudeUi, codexUi, shown, activated, registrations, needingYou, selectedRows, active,
+    claudeUi, codexUi, shown, activated, registrations, needingYou, selectedRows, active, prepare,
     /** A chat in a worktree (main by default), linked when `sessionId` is given. */
     chat(harness: HarnessId, name: string, sessionId: string | null = null, worktree = main): ChatSession {
       return storage.createChat(worktree.id, harness, name, { harnessSessionId: sessionId });
@@ -257,6 +263,21 @@ test('Open in UI stops a running terminal only after confirmation, then hands ov
   assert.deepEqual(f.claudeUi.opened, [{ sessionId: 'claude-1', cwd: f.main.path }]);
   assert.deepEqual(f.claudeUi.surfaces.calls, ['expect:claude-1:Running', 'settle:claude-1']);
   assert.deepEqual([stub.window.terminals.length, f.activated], [0, [chat.id]]);
+});
+
+test('a UI open focuses the worktree before asking whether the UI can run there', async (t) => {
+  const f = setup(t);
+  const chat = f.chat('claude', 'Mismatch first', 'claude-9');
+  let available = false;
+  f.claudeUi.nativeUi.checkAvailability = () =>
+    available ? { kind: 'available' } : { kind: 'workspace-mismatch', uiCwd: '/elsewhere' };
+  f.prepare.hook = () => {
+    available = true;
+  };
+
+  await runCommand('agntree.openClaudeUi', f.row(chat));
+  assert.deepEqual(f.prepare.calls, [f.main.id]);
+  assert.deepEqual(f.claudeUi.opened, [{ sessionId: 'claude-9', cwd: f.main.path }]);
 });
 
 test('Open in UI explains a refusal before touching anything', async (t) => {

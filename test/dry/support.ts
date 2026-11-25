@@ -65,7 +65,16 @@ interface StubControls {
   __setOpenExternalResult(value: boolean): void;
   __openExternalCalls: { toString(): string }[];
   __setSilentExecutionEvents(value: boolean): void;
-  workspace: { workspaceFolders: { uri: { fsPath: string } }[] };
+  workspace: {
+    workspaceFolders: { uri: { fsPath: string; scheme?: string; authority?: string; name?: string } }[];
+    workspaceFile: { fsPath: string } | undefined;
+    updateWorkspaceFolders(
+      start: number,
+      deleteCount: number | null | undefined,
+      ...folders: { uri: { fsPath: string; scheme?: string; authority?: string }; name?: string }[]
+    ): boolean;
+  };
+  env: { remoteName: string | undefined };
   window: {
     terminals: FakeTerminal[];
     activeTerminal: FakeTerminal | undefined;
