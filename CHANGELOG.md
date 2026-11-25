@@ -13,11 +13,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Focus** — selecting a worktree, or opening one of its sessions, points the Changes and All Files panels at it and moves its folder to the front of the managed workspace. The Claude Code panel runs in the first folder, so it now works for any worktree of an Open Project instead of only the one VS Code had open. The folder set never changes.
 - **Add Project offers git** — picking a folder that is not a git repository offers to initialize one (`git init`, no commit); declining leaves it out. Projects are managed with git.
 - **Remote-first install** — the extension declares `extensionKind: ["workspace"]`, so a Remote-SSH window runs it, and reads only the host's projects and sessions, never the local machine's.
+- **Branches** — every git Project now has a collapsed **Branches** group below its worktrees, listing the local branches only. A branch with a worktree opens it; one without is greyed as `no worktree`; a detached worktree appears as its short commit. The group is read-only.
+- **A session running elsewhere asks first** — when Claude Code reports that a session is already running in another process, clicking it offers **Copy Resume Command** or a confirmed **Start Another Process…** instead of silently resuming and forking the conversation.
+- **Worktree delete goes to the Trash** — deleting a worktree moves its directory to the Trash and prunes git's records. A host without a usable Trash falls back to a permanent delete, and the message and the operation log say so.
 
 ### Changed
 
 - **Project wording** — **Workspaces** is now **Projects**; **Add Local Folder or Repository…** is **Add Project…**, and **Remove from Agntree…** is **Remove Project from Agntree…**. The commands and the view id stay the same.
 - **Focus replaces folder switching** — the worktree you select is the one the panels and the Claude Code panel use; VS Code's Explorer order follows Focus. **Open in New Window** remains for opening one worktree alone.
+- **A click opens the official panel first** — clicking a session focuses the terminal or panel already showing it; otherwise it opens the agent's own VS Code panel, and a terminal resume is the fallback. `agntree.defaultSessionSurface` now chooses where a **new** session starts. **Open Session in Terminal** remains the explicit way back. See [ADR 0023](adr/0023-open-policy-and-surface-handoff.md).
+- **Switching surfaces waits for idle** — moving a session between its terminal and its panel is refused while the agent is working on a turn, so the switch never kills a running turn.
+- **Dangerous git actions confirm** — merge, rebase, delete worktree, fork to a new worktree, and PR checkout now confirm with the branch, worktree, uncommitted-file count, and open agent sessions, and each writes to the operation log. See [ADR 0024](adr/0024-preflights-and-trash-delete.md).
 
 ### Removed
 
