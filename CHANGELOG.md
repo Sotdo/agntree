@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Removed
+
+- **Find Session** — the feature is removed, along with its view, commands, settings, and the `agntree.sessionSearch.*` configuration. Session history is still available through **Import Existing Sessions…** and the per-worktree session list. See [ADR 0018](adr/0018-remove-find-session.md).
+
 ## [4.0.0] - 2026-11-14
 
 ### Added
