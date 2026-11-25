@@ -11,7 +11,7 @@ Agntree's default shortcuts use `Ctrl+Alt` on Windows and Linux and `Ctrl+Cmd` o
 | `Ctrl+Alt+S` | `Ctrl+Cmd+S` | Starred Sessions… |
 | `Ctrl+Alt+A` | `Ctrl+Cmd+A` | Show the Agntree sidebar |
 
-## In the Workspaces view
+## In the Projects view
 
 With a session selected:
 

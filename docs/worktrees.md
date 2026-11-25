@@ -1,19 +1,21 @@
-# Worktrees and repositories
+# Worktrees and Projects
 
-A git worktree is a second checkout of the same repository in its own directory, on its own branch. Agntree makes worktrees the unit of agent work: one worktree per task, one or more agent sessions inside it, and no two agents editing the same files. This page covers adding repositories, creating and removing worktrees, and the git actions on them.
+A git worktree is a second checkout of the same repository in its own directory, on its own branch. Agntree makes worktrees the unit of agent work: one worktree per task, one or more agent sessions inside it, and no two agents editing the same files. This page covers adding Projects, creating and removing worktrees, and the git actions on them.
 
 For the workflow as a whole, read [Run multiple agents in parallel with git worktrees](guides/parallel-agents-git-worktrees.md).
 
-## Add a folder or repository
+## Add a Project
 
-In the **Workspaces** view, select **Add Local Folder or Repository…** (the folder icon in the view's title) and pick a folder.
+In the **Projects** view, select **Add Project…** (the folder icon in the view's title) and pick a folder.
 
 - A **git repository** is listed with its worktrees beneath it. If you pick a directory inside a repository, Agntree adds the repository's root.
-- A **plain folder** is listed with its sessions directly beneath it. See [Folders without git](#folders-without-git).
+- A folder that is **not a repository** is offered a `git init`: Agntree creates `.git` and makes no commit. Agntree manages Projects with git, so declining leaves the folder out.
 
 To start from GitHub instead, choose **Clone from GitHub…** in the view's `…` menu, enter a URL or `owner/repo`, and pick the parent folder. Agntree clones the repository and adds it.
 
-Repositories do not need to be open in VS Code, and you can add as many as you like. Reorder them with **Move Up** and **Move Down** on the right-click menu.
+Projects do not need to be open in VS Code, and you can add as many as you like. Reorder them with **Move Up** and **Move Down** on the right-click menu.
+
+A Project is either **Open** or **Registered**: an Open Project contributes every worktree as a folder of the [managed workspace](getting-started.md#open-the-managed-workspace), a Registered one only appears in the tree. Use **Add Project to Workspace** and **Remove Project from Workspace** on the Project's right-click menu to switch.
 
 ## Read a worktree row
 
@@ -26,7 +28,7 @@ Repositories do not need to be open in VS Code, and you can add as many as you l
 
 | You see | It means |
 | --- | --- |
-| Amber target icon and `●` | The folder this VS Code window has open |
+| Amber target icon and `●` | The focused worktree: the Changes and All Files panels show it. Selecting the worktree or opening one of its sessions moves its folder first in the managed workspace |
 | Green branch icon | The repository's main worktree |
 | Blue pull-request icon | A worktree created by **Check Out Pull Request…** |
 | `↑2` / `↓1` | Commits ahead of and behind the branch's upstream |
@@ -67,18 +69,17 @@ Pull request features need the [GitHub CLI](https://cli.github.com/) (`gh`), sig
 
 ## Work in a worktree
 
-Selecting a worktree or one of its sessions points the [Changes and All Files panels](changes-and-files.md) at it. The worktree's right-click menu has the rest:
+Selecting a worktree **focuses** it: the [Changes and All Files panels](changes-and-files.md) point at it, and the managed workspace moves its folder first, so the Claude Code panel runs in the right directory. The folder set does not change and no agent is interrupted. Selecting one of its sessions focuses the same worktree.
+
+The worktree's right-click menu has the rest:
 
 | Action | What it does |
 | --- | --- |
 | **New Session** | Start any installed agent here |
 | **Import Existing Sessions…** | Add sessions the agents already hold for this directory |
-| **Open in This Window** | Make this worktree the folder VS Code has open, so the Explorer, search, and Source Control follow |
-| **Open in New Window** | Open the worktree in its own VS Code window |
+| **Open in New Window** | Open the worktree alone in its own VS Code window |
 | **Open Terminal Here** | A plain terminal in the worktree |
 | **Copy Path** | Copy the worktree's directory |
-
-To have VS Code follow your selection automatically, turn on [`agntree.autoSwitchWorkspaceFolder`](reference/settings.md#window). VS Code restarts its extensions on each switch, which shows as a short flicker.
 
 ## Merge and rebase
 
@@ -95,15 +96,15 @@ Right-click a worktree and choose **Delete Worktree…**. The confirmation says 
 
 Deleting a worktree removes its directory from disk; it does not go to the Trash. If the worktree has uncommitted changes, the confirmation warns you and the buttons say **(force)**. Session rows under the worktree leave the list and their terminals close, but the agents keep the conversations. The main worktree cannot be deleted.
 
-## Remove a repository from Agntree
+## Remove a Project from Agntree
 
-Right-click a repository or folder and choose **Remove from Agntree…**. This only removes it from the sidebar: your files, the git repository, and the agents' conversations are untouched. Add the folder again and **Import Existing Sessions…** brings its sessions back.
+Right-click a Project and choose **Remove Project from Agntree…**. Its folders leave the managed workspace and the row leaves the sidebar; your files, the git repository, and the agents' conversations are untouched. Add the folder again and **Import Existing Sessions…** brings its sessions back.
 
 ## Folders without git
 
-Any folder can hold sessions, even an empty one. A plain folder gets a folder icon, and its sessions sit directly under it with no worktree level.
+Agntree adds Projects with git, but a registered folder whose `.git` disappears still works: it keeps a folder icon, and its sessions sit directly under it with no worktree level. Any folder added by an older version keeps working the same way.
 
-If the folder becomes a repository, for example because you or an agent runs `git init`, Agntree upgrades the row and keeps every session where it was. Actions that need git (creating a worktree, merge, rebase, pull requests) appear from then on.
+If the folder becomes a repository again, for example because you or an agent runs `git init`, Agntree upgrades the row and keeps every session where it was. Actions that need git (creating a worktree, merge, rebase, pull requests) appear from then on.
 
 ## Folders inside folders
 
@@ -112,4 +113,4 @@ If you add both a folder and a repository inside it (say `~/code` and `~/code/st
 ## Related
 
 - [Fork a session into a new worktree](fork-sessions.md#fork-into-a-new-worktree)
-- [Commands on repository and worktree rows](reference/commands.md#repository-and-folder-rows)
+- [Commands on Project and worktree rows](reference/commands.md#project-rows)

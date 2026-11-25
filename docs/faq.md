@@ -78,7 +78,7 @@ In a folder beside the repository, named `<repo>-worktrees`. A worktree for `fea
 
 ### Can I use Agntree without git?
 
-Yes. **Add Local Folder or Repository…** accepts any folder. Sessions run directly in it, and worktree, merge, rebase, and pull request actions appear if the folder later becomes a repository. See [Folders without git](worktrees.md#folders-without-git).
+Agntree adds Projects with git: **Add Project…** offers to run `git init` for a folder that is not a repository, and declining leaves the folder out. A registered folder whose `.git` later disappears still works; sessions run directly in it, and worktree, merge, rebase, and pull request actions disappear with git. See [Folders without git](worktrees.md#folders-without-git).
 
 ### Can an agent review a GitHub pull request?
 

@@ -1,11 +1,11 @@
 # Getting started
 
-Install Agntree from the VS Code Marketplace, add a folder or repository, and click **+** to start a Claude Code, Codex, opencode, or Pi session. This page walks through that, start to finish.
+Install Agntree from the VS Code Marketplace, add a Project, and click **+** to start a Claude Code, Codex, opencode, or Pi session. This page walks through that, start to finish.
 
 ## Requirements
 
 - **VS Code 1.93 or newer**, or an editor built on it such as Cursor.
-- **Git**, for worktrees, the Changes panel, and pull requests. A plain folder without git works too.
+- **Git**, for Projects, worktrees, the Changes panel, and pull requests. Adding a folder that is not a repository offers to initialize one.
 - **At least one supported agent CLI**, installed and working in a terminal:
 
   | Agent | Command | Notes |
@@ -33,14 +33,26 @@ code --install-extension subhashkhileri.agntree
 
 Agntree needs no account and no configuration.
 
-## Add a folder or repository
+## Add a Project
 
 1. Select the Agntree icon in the Activity Bar. `Ctrl+Alt+A` (`Ctrl+Cmd+A` on macOS) opens it from anywhere.
-2. In the **Workspaces** view, choose **Add Local Folder or Repository…** and pick a folder. To start from GitHub, choose **Clone from GitHub…** and enter a URL or `owner/repo`.
+2. In the **Projects** view, choose **Add Project…** and pick a folder. If it is not a git repository, Agntree offers to initialize one (it creates `.git` and makes no commit). To start from GitHub, choose **Clone from GitHub…** and enter a URL or `owner/repo`.
 
-The folder appears as a row. A git repository expands to its worktrees, starting with the one you already have (usually `main`). A folder without git works as well: sessions run directly in it, and if it becomes a repository later, Agntree notices.
+The Project appears as a row. A git repository expands to its worktrees, starting with the one you already have (usually `main`).
 
-Add as many folders and repositories as you like. They do not have to be open in VS Code.
+Add as many Projects as you like. They do not have to be open in VS Code.
+
+## Open the managed workspace
+
+Agntree keeps every worktree of your Open Projects in one VS Code workspace, per host: `~/.agntree/agntree.code-workspace` on the machine VS Code is connected to (a Remote-SSH window keeps its own). This is what lets agents run side by side in different worktrees without switching folders or reloading the window.
+
+- On first run Agntree offers to open it. **Open Managed Workspace** in the view's `…` menu opens it later.
+- **Add Project to Workspace** on a Project's right-click menu opens all of its worktrees as folders; **Remove Project from Workspace** takes them out. Files, agents, and sessions are not affected either way.
+- **Open in New Window** on a worktree still opens that worktree alone in its own window.
+
+Selecting a worktree **focuses** it: the Changes and All Files panels follow it, and its folder moves to the front of the workspace, which is where the Claude Code extension's panel runs. The folder set never changes, so a running agent is never interrupted.
+
+The view marks a Project that is not in the workspace with **not in workspace**. Its sessions still run in terminals, but the Claude Code panel cannot be used until it is added.
 
 ## Start your first session
 

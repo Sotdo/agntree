@@ -1,6 +1,6 @@
 # Agntree: session and git worktree manager for Claude Code, Codex, opencode, and Pi
 
-**Run every coding agent without leaving VS Code.** Agntree is a free, open-source extension for VS Code and Cursor that puts your Claude Code, Codex, opencode, and Pi sessions in one sidebar, grouped by repository and git worktree. Run agents in parallel, resume any conversation with one click, fork it to try another approach, and know the moment an agent needs you. There is no separate app to install and no second window to keep an eye on.
+**Run every coding agent without leaving VS Code.** Agntree is a free, open-source extension for VS Code and Cursor that puts your Claude Code, Codex, opencode, and Pi sessions in one sidebar, grouped by Project and git worktree. Run agents in parallel, resume any conversation with one click, fork it to try another approach, and know the moment an agent needs you. There is no separate app to install and no second window to keep an eye on.
 
 [![VS Code Marketplace](https://img.shields.io/visual-studio-marketplace/v/subhashkhileri.agntree?label=VS%20Code%20Marketplace&color=5bb8dc)](https://marketplace.visualstudio.com/items?itemName=subhashkhileri.agntree)
 [![License: MIT](https://img.shields.io/github/license/subhashkhileri/agntree?color=5bb8dc)](https://github.com/subhashkhileri/agntree/blob/main/LICENSE)
@@ -34,7 +34,7 @@ code --install-extension subhashkhileri.agntree
 
 In Cursor, search for **Agntree** in the Extensions view; if it is not listed, install the `.vsix` from the [latest release](https://github.com/subhashkhileri/agntree/releases/latest).
 
-Then select the Agntree icon in the Activity Bar, choose **Add Local Folder or Repository…**, and select **+** on a worktree to start a session. The [getting started guide](https://subhashkhileri.github.io/agntree/docs/getting-started/) walks through it in two minutes.
+Then select the Agntree icon in the Activity Bar, choose **Add Project…**, and select **+** on a worktree to start a session. The [getting started guide](https://subhashkhileri.github.io/agntree/docs/getting-started/) walks through it in two minutes.
 
 **Requirements:** VS Code 1.93 or newer (or Cursor), git, and at least one of the agent CLIs below. The GitHub CLI (`gh`) is optional and enables pull request checkout.
 
@@ -42,7 +42,7 @@ Then select the Agntree icon in the Activity Bar, choose **Add Local Folder or R
 
 ### All your sessions, next to the code
 
-Every Claude Code, Codex, opencode, and Pi session sits under its repository and git worktree, across as many repositories as you add. Click one and the agent's own CLI opens with the right session ID in the right directory.
+Every Claude Code, Codex, opencode, and Pi session sits under its Project and git worktree, across as many Projects as you add. Click one and the agent's own CLI opens with the right session ID in the right directory.
 
 A session opens as an ordinary editor tab, so you can drag it, split it, and put two agents side by side like any two files.
 
@@ -61,6 +61,7 @@ Give each task its own branch and its own directory, so agents never edit the sa
 - Repository to worktree to running agent in three clicks.
 - Ahead and behind counts and the pull request number on every branch.
 - Merge, rebase, and delete worktrees without leaving the sidebar.
+- Every worktree of your Open Projects lives in one managed workspace, so the Claude Code panel opens in the right directory and agents keep running while you move between them.
 
 ![Creating a git worktree from the Agntree sidebar and starting a Claude Code session in it, beside a session on main](media/demo-worktrees.gif)
 

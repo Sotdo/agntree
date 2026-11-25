@@ -38,7 +38,7 @@ Agntree keeps the same git worktrees and adds the bookkeeping. Everything below 
 
 ### 1. Add your repository
 
-Open the Agntree sidebar and choose **Add Local Folder or Repository…**. The repository appears with its current worktree.
+Open the Agntree sidebar and choose **Add Project…**. The repository appears with its current worktree. Accept the offer to open the managed workspace, which holds every worktree of your Open Projects, so the Claude Code panel and the Explorer can follow the agent you are looking at.
 
 ### 2. Create a worktree for each task
 

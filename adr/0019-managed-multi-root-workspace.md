@@ -20,9 +20,11 @@ and `prompt`).
 - One Managed Workspace per Host. An Open Project contributes every worktree as a folder;
   a Registered Project does not. A first-run prompt offers to open it; the tree still
   works when it is not open.
-- **Focus** reveals and highlights the worktree, points the Changes and All Files panels
-  at it, brings Source Control forward, and moves it to `workspaceFolders[0]`. The folder
-  set does not change.
+- **Focus** highlights the worktree in the tree and points the Changes and All Files
+  panels at it; selecting the worktree or opening one of its sessions also moves it to
+  `workspaceFolders[0]`. It does not take over VS Code's Explorer or Source Control
+  views: those switch away from Agntree's own tree, which is the surface Focus belongs
+  to. The folder set does not change.
 - Remove `autoSwitchWorkspaceFolder` and the Open in This Window command; keep **Open in
   New Window**.
 - Declare `extensionKind: ["workspace"]`, and build folder and workspace-file URIs with
@@ -56,8 +58,9 @@ and `prompt`).
 ## Consequences
 
 - Explorer root order follows Focus; the tree's Project order stays independent.
-- The active worktree is persisted separately; terminal restore keys PIDs by worktree, not
-  by workspace folder.
+- The active worktree is persisted separately; terminal restore keys PIDs by the managed
+  workspace file and migrates the previous folder key, so the conversion keeps adopting
+  the agents it launched before.
 - An already-open Claude sidebar may keep its construction cwd; the editor panel does not.
 - Adding and removing folders is in-place in the managed workspace; the first conversion
   from a single-folder window reloads the window once.

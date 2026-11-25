@@ -19,7 +19,7 @@ To find the full path, run `which claude` (or `where claude` on Windows).
 - **You removed it before.** A session you removed from the list is not imported again automatically. **Import Existing Sessions…** brings it back.
 - **Automatic import is off.** Check `agntree.autoImport.enabled`.
 - **The session has no prompt yet.** Agents create a session only when you send the first message. Until then the row says `new`.
-- **The sidebar was hidden.** Agntree pauses its background scan while its view is closed and catches up when you open it. **Refresh** in the Workspaces `…` menu forces it.
+- **The sidebar was hidden.** Agntree pauses its background scan while its view is closed and catches up when you open it. **Refresh** in the Projects `…` menu forces it.
 - **Claude Code uses a custom profile.** Agntree reads `CLAUDE_CONFIG_DIR` from VS Code's environment. Start VS Code from a shell where that variable is set.
 - **Codex threads stopped appearing after a Codex upgrade.** Agntree talks to `codex app-server`, which Codex marks as experimental. Update Agntree, and [open an issue](https://github.com/subhashkhileri/agntree/issues) with your Codex version if it persists.
 

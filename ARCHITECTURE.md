@@ -58,7 +58,8 @@ view-box`), which Chromium plays in tree-icon `background-image`; honor
 
 ### Core Services (`src/services/`)
 
-- **StorageService** - Persists repositories, chats, stars, PR checkouts, removal tombstones, and terminal PIDs in `globalState`; migrates legacy `claudeSessionId` records on read
+- **StorageService** - Persists repositories, chats, stars, PR checkouts, removal tombstones, active worktrees, and terminal PIDs in `globalState`; migrates legacy `claudeSessionId` records on read
+- **ManagedWorkspaceService** - Owns `~/.agntree/agntree.code-workspace`, one per host: the durable folder list of every Open Project's worktrees. Add and Remove edit the file and, when it is the open workspace, the live window through `updateWorkspaceFolders()`; Focus only reorders, writing the file first and applying the same order to the window, with the previous order restored if VS Code refuses. `utils/hostUri.ts` builds folder and workspace-file URIs with the window's authority so a Remote-SSH window never addresses the local filesystem. A malformed file is refused rather than overwritten
 - **GitService** - Git through argument arrays: worktrees, the Changes panel listing, discards, merges, and rebases. Local commands run synchronously; clone and fetch are async so the network never blocks the extension host
 - **WorktreeCatalog** - Every worktree of every workspace root (short TTL cache) and which one owns a session: the deepest worktree containing its directory, across all roots. The importer, the Import commands, and the Codex/opencode watchers ask it, so a repository added as its own root inside another root (a `Documents` folder holding a project) keeps its sessions
 - **GitHubService** - `gh` CLI: the PR badge per branch (cached, one in-flight lookup per branch), open PRs, and the local branch for a PR checkout
@@ -110,7 +111,7 @@ view-box`), which Chromium plays in tree-icon `background-image`; honor
 
 ### Tree Providers (`src/providers/`)
 
-- **WorkspacesTreeProvider** - Main sidebar tree: Repository → Worktree → Session hierarchy, with a plain folder standing in for a repository that has no worktrees of its own. Quiet by design: session rows show only a short relative time (`16m`, `2h`, `3d`) or `new`, a star, and the harness mark; the tooltip carries the session brief (last exchange, then message count/model/agent, skipping fields the harness does not provide — Claude supplies only summary, last exchange, and last activity). A harness whose previews are `lazy` (opencode) gets no tooltip at render time; `resolveTreeItem` fetches its preview when the row is hovered, so a render never starts an export and the adapter's own cache keeps hovering cheap. Session rows keep one stable order: newest first by `createdAt`. Opening, resuming, or starring a chat changes its mark and description but never its position, so the list does not jump under the cursor. Repository icons are neutral — `repo` for a git repository, `folder` for a plain folder; worktree color marks state only — amber for the open workspace, blue for a PR checkout, green for the main worktree, neutral otherwise. Worktrees show `↑n`/`↓n` ahead/behind from `GitService.getAheadBehind()` (15s cache). Repository rows follow the stored array order; **Move Up** / **Move Down** swap a row with its nearest visible neighbor, so the order needs no field of its own.
+- **WorkspacesTreeProvider** - Main sidebar tree: Repository → Worktree → Session hierarchy, with a plain folder standing in for a repository that has no worktrees of its own. Quiet by design: session rows show only a short relative time (`16m`, `2h`, `3d`) or `new`, a star, and the harness mark; the tooltip carries the session brief (last exchange, then message count/model/agent, skipping fields the harness does not provide — Claude supplies only summary, last exchange, and last activity). A harness whose previews are `lazy` (opencode) gets no tooltip at render time; `resolveTreeItem` fetches its preview when the row is hovered, so a render never starts an export and the adapter's own cache keeps hovering cheap. Session rows keep one stable order: newest first by `createdAt`. Opening, resuming, or starring a chat changes its mark and description but never its position, so the list does not jump under the cursor. Repository icons are neutral — `repo` for a git repository, `folder` for a plain folder; worktree color marks state only — amber for the focused worktree, blue for a PR checkout, green for the main worktree, neutral otherwise. A Project that is not in the managed workspace says `not in workspace`; the focused worktree comes from the per-workspace id `extension.ts` persists in `prepareWorktree()`, not from `workspaceFolders[0]`. Worktrees show `↑n`/`↓n` ahead/behind from `GitService.getAheadBehind()` (15s cache). Repository rows follow the stored array order; **Move Up** / **Move Down** swap a row with its nearest visible neighbor, so the order needs no field of its own.
 The Changes and All Files panels show one worktree at a time. `extension.ts` owns that
 choice (`showWorktree()`) and one file watcher on the shown worktree that refreshes both
 panels.
@@ -121,7 +122,7 @@ panels.
 ### Commands (`src/commands/`)
 
 Commands are registered in `package.json` under `contributes.commands` and implemented in:
-- `repository.ts` - Add/remove/clone workspace roots (plain folders or git repositories)
+- `repository.ts` - Add (with an explicit `git init` for a folder that is not a repository), remove, and clone Projects, reorder them, and manage workspace membership (**Add Project to Workspace**, **Remove Project from Workspace**, **Open Managed Workspace**)
 - `worktree.ts` - Create/delete worktrees, merge branches, open in new window, checkout PRs
 - `chat.ts` - Create/open/rename/delete/fork/star sessions and hand them between the terminal and an agent's VS Code UI. Per-harness commands (`agntree.new<Harness>Chat`, its `InTerminal`/`InUi` variants, and `agntree.open<Harness>Ui`) are registered from the harness registry, so this file names no harness.
 - `sessionImport.ts` - **Import Existing Sessions** for one worktree
@@ -237,7 +238,7 @@ host starts silently.
 
 ### Opening in the Claude Code extension UI
 
-`agntree.openClaudeUi` is an explicit handoff for an existing Claude session. It resolves the native ID, verifies the transcript exists, and calls `ClaudeHarness.nativeUi.openSession()` (`ClaudeUi` in `src/harnesses/claudeUi.ts`). The extension UI runs in the first VS Code workspace folder, so the service refuses a session from another worktree (`workspace-mismatch`) and the command offers to open that worktree in a new window. The extension and folder are checked before a running terminal is touched; only then is the terminal disposed after confirmation, and the command waits for its close event before handing over, so two processes never share one session.
+`agntree.openClaudeUi` is an explicit handoff for an existing Claude session. It resolves the native ID, verifies the transcript exists, and calls `ClaudeHarness.nativeUi.openSession()` (`ClaudeUi` in `src/harnesses/claudeUi.ts`). The extension UI runs in the first VS Code workspace folder. Before the availability check, the command calls `prepareWorktree()` (panels, persisted Focus, `ManagedWorkspaceService.reorderToFirst()`), so a worktree that is in the managed workspace becomes the first folder and the check passes. A worktree outside the managed workspace, or a window that is not the managed workspace, still gets `workspace-mismatch` and the command offers to open that worktree in a new window; the reorder never changes the folder set. The extension and folder are checked before a running terminal is touched; only then is the terminal disposed after confirmation, and the command waits for its close event before handing over, so two processes never share one session.
 
 The service prefers the extension command `claude-vscode.editor.open` with `ViewColumn.Active` and `{ programmatic: 'honor-preferred-location' }`, which respects `claudeCode.preferredLocation` and opens where the session's terminal or the user's files are. Without a column, the extension creates a new right-hand editor group and may lock it. If the command is not registered it uses the documented `vscode://anthropic.claude-code/open?session=…` URI. A failing command is reported rather than falling back, because the URI starts a fresh conversation when the session is not found.
 
@@ -645,13 +646,17 @@ Using `pr-<number>` (e.g., `pr-4267`) instead of the PR's actual branch name avo
 
 ## Important VS Code Extension Gotchas
 
-### Extension Host Restarts on Workspace Switch
+### Multi-root Workspace Edits and Host Restarts
 
-Calling `vscode.workspace.updateWorkspaceFolders()` to switch to a different repository **terminates and restarts the extension host**. All in-memory state is lost. To persist state across these restarts:
+In a multi-root workspace, `vscode.workspace.updateWorkspaceFolders()` edits the
+`.code-workspace` configuration in place; the extension host keeps running and agents keep
+their terminals. Only replacing the sole folder of a single-folder window calls
+`createAndEnterWorkspace`, which restarts the host — that is the one-time conversion when
+a single-folder window opens the managed workspace.
 
-1. Keep state that must survive in `globalState` (the active chat, terminal PIDs)
-2. Derive the rest in `activate()`: the shown worktree comes from the new first workspace folder
-3. Don't rely on in-memory maps or caches surviving
+1. Keep state that must survive in `globalState` (the active chat, the focused worktree, terminal PIDs)
+2. Derive the rest in `activate()`: the shown worktree comes from the persisted Focus id, falling back to the first workspace folder
+3. Don't rely on in-memory maps or caches surviving a conversion
 
 ### Tree View reveal() Requirements
 
@@ -674,8 +679,9 @@ An Agntree terminal has two identities, and
 [ADR 0009](adr/0009-restored-terminals-keep-their-chat.md) records why and what each
 costs: the title `Agntree: <chat name> [<shortId>]` (`terminalTitle()` /
 `titleShortId()` in `terminalEvents.ts`) identifies a tab after a quit, and the pty PID
-recorded per workspace folder (`StorageService.getTerminalPids()` /
-`rememberTerminalPid()`) identifies a live agent after a reload. A rename is durable
+recorded per workspace (`StorageService.getTerminalPids()` /
+`rememberTerminalPid()`, keyed by the workspace file when the managed workspace is open,
+else the first folder) identifies a live agent after a reload. A rename is durable
 only once the launch command has started, and only the active tab can be renamed, so
 title writes are serialized and re-check the active tab. Background retitling marks its
 activations so `consumeBackgroundActivation()` lets the extension ignore them.

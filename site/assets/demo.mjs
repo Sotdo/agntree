@@ -558,7 +558,7 @@ export function renderWindow(step = SCENES[0].steps[0], { assets = 'assets/' } =
   <div class="vsc-body">
     <div class="vsc-activity"><span>${ICONS.explorer}</span><span>${ICONS.search}</span><span>${ICONS.scm}</span><span class="on">${ICONS.tree}</span></div>
     <div class="vsc-side">
-      <div class="vsc-view">Workspaces</div>
+      <div class="vsc-view">Projects</div>
       <ul>${rows.join('')}</ul>
       <div class="vsc-view">Changes ${title}</div>
       <ul>${changes}</ul>

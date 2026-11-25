@@ -45,10 +45,10 @@ inventory only.
 _Avoid_: ref (for users)
 
 **Focus**:
-Making a Worktree the active one: highlight it in the tree, reveal it in the Explorer,
-bring Source Control forward, point the Changes and All Files panels at it, and keep it
-first in the Managed Workspace. Focus changes neither the Workspace's folder set nor the
-git HEAD.
+Making a Worktree the active one: highlight it in the tree and point the Changes and All
+Files panels at it. Selecting the worktree or opening one of its sessions also moves it
+first in the Managed Workspace. Focus takes over neither VS Code's Explorer nor its
+Source Control view, and changes neither the Workspace's folder set nor the git HEAD.
 _Avoid_: switch, open, migrate (for this action)
 
 **Workspace**:

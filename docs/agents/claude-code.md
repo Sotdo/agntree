@@ -43,7 +43,7 @@ Agntree installs no hooks and never edits `~/.claude/settings.json`. It reads th
 
 ## Use the Claude Code panel
 
-A Claude Code session can move between its terminal and the Claude Code extension's chat panel. Select the panel icon on a session, or choose **Open in Claude Code UI**. The extension runs conversations in the first folder open in the VS Code window, so the session's worktree must be that folder; otherwise Agntree offers to open the worktree in a new window. See [Agent panels](../agent-panels.md).
+A Claude Code session can move between its terminal and the Claude Code extension's chat panel. Select the panel icon on a session, or choose **Open in Claude Code UI**. The extension runs conversations in the first folder open in the VS Code window; Agntree focuses the session's worktree first, which moves its folder to the front of the managed workspace, so any worktree of an Open Project works. A worktree that is not in the workspace still cannot host the panel, and Agntree offers to open it in a new window. See [Agent panels](../agent-panels.md).
 
 ## What Agntree runs
 

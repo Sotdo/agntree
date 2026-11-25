@@ -26,10 +26,9 @@ See [Notifications](../notifications.md).
 
 | Setting | Default | What it does |
 | --- | --- | --- |
-| `agntree.autoSwitchWorkspaceFolder` | `false` | When you select a worktree or session in another repository, make that folder the one VS Code has open, so the Explorer, search, and Source Control follow it. VS Code restarts its extensions on each switch, which shows as a brief flicker. Off: use **Open in This Window** on a worktree. |
 | `agntree.focusOnStartup` | `false` | Open the Agntree sidebar when VS Code starts, instead of the Explorer. |
 
-Both can also be switched from the Agntree `…` menu.
+It can also be switched from the Agntree `…` menu.
 
 ## Agent commands
 

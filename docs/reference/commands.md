@@ -6,13 +6,16 @@ Agntree's commands are in three places: the Command Palette, the hover icons and
 
 Open the Command Palette (`Ctrl+Shift+P`, `Cmd+Shift+P` on macOS) and type **Agntree**. The palette lists only the commands that work without a row under the cursor.
 
-### Folders, repositories, and worktrees
+### Projects, worktrees, and the managed workspace
 
 | Command | What it does |
 | --- | --- |
-| **Agntree: Add Local Folder or Repository…** | Add a folder or a git repository to the sidebar |
-| **Agntree: Clone from GitHub…** | Clone a repository and add it |
-| **Agntree: Remove from Agntree…** | Remove a folder or repository from the sidebar. Files and conversations are kept |
+| **Agntree: Add Project…** | Add a folder as a Project; a folder without git is offered a `git init` |
+| **Agntree: Clone from GitHub…** | Clone a repository and add it as a Project |
+| **Agntree: Remove Project from Agntree…** | Remove a Project from the sidebar and its folders from the workspace. Files and conversations are kept |
+| **Agntree: Add Project to Workspace** | Open every worktree of the Project as a folder of the managed workspace |
+| **Agntree: Remove Project from Workspace** | Take the Project's folders out of the managed workspace |
+| **Agntree: Open Managed Workspace** | Open the managed workspace for this host |
 | **Agntree: Create Worktree…** | Create a git worktree from an existing or a new branch |
 | **Agntree: Check Out Pull Request…** | Check out a GitHub pull request into a new worktree |
 
@@ -59,26 +62,26 @@ Open the Command Palette (`Ctrl+Shift+P`, `Cmd+Shift+P` on macOS) and type **Agn
 | --- | --- |
 | **Agntree: Agntree Settings…** | Open Agntree's settings in the Settings editor |
 | **Agntree: Agntree Keyboard Shortcuts…** | Open Agntree's shortcuts in the Keyboard Shortcuts editor |
-| **Agntree: Turn On Auto-Switch Workspace Folder** / **Turn Off Auto-Switch Workspace Folder** | Make VS Code's open folder follow the worktree you select |
 | **Agntree: Turn On Focus on Startup** / **Turn Off Focus on Startup** | Open the Agntree sidebar when VS Code starts |
 
-## Workspaces view
+## Projects view
 
-The view's title bar has **Add Local Folder or Repository…**. Its `…` menu has:
+The view's title bar has **Add Project…**. Its `…` menu has:
 
-- **Clone from GitHub…**, **Check Out Pull Request…**
+- **Open Managed Workspace**, **Clone from GitHub…**, **Check Out Pull Request…**
 - **Go to Next Session That Needs You**, **Starred Sessions…**
-- **Set Default Agent…**, the two **Turn On** / **Turn Off** switches, **Agntree Settings…**, **Agntree Keyboard Shortcuts…**
+- **Set Default Agent…**, the **Turn On** / **Turn Off** Focus on Startup switch, **Agntree Settings…**, **Agntree Keyboard Shortcuts…**
 - **Refresh**
 
-## Repository and folder rows
+## Project rows
 
 | Action | Where | Notes |
 | --- | --- | --- |
 | **Create Worktree…** | Hover icon, right-click | Git repositories |
 | **Check Out Pull Request…** | Right-click | Git repositories; needs the `gh` CLI |
+| **Add Project to Workspace**, **Remove Project from Workspace** | Right-click | The command that does not apply explains itself |
 | **Move Up**, **Move Down** | Right-click | Reorder the list |
-| **Remove from Agntree…** | Right-click | Removes the row only |
+| **Remove Project from Agntree…** | Right-click | Removes the row and the Project's folders only |
 
 A plain folder row also has every action of a worktree row except the git ones, because sessions run directly in it.
 
@@ -88,7 +91,6 @@ A plain folder row also has every action of a worktree row except the git ones, 
 | --- | --- | --- |
 | **New Session** | Hover icon, right-click | A menu of installed agents, or your default agent in one click |
 | **Import Existing Sessions…** | Right-click | |
-| **Open in This Window** | Right-click | Shown when Auto-Switch Workspace Folder is off |
 | **Open in New Window** | Right-click | |
 | **Open Terminal Here** | Hover icon, right-click | A plain terminal |
 | **Open Pull Request in Browser** | Right-click | When the branch has a pull request |

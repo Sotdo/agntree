@@ -369,12 +369,20 @@ shortens the code but makes failure behavior less clear is a regression; revert 
 
 ## Gotchas
 
-- **Extension host restarts on workspace switch.** `vscode.workspace.updateWorkspaceFolders()`
-  tears down the host. Persist the active chat to `globalState` before the switch;
-  `activate()` restores the active worktree from the new first workspace folder.
+- **In a multi-root workspace, folder edits are in place.** `vscode.workspace.updateWorkspaceFolders()`
+  edits the `.code-workspace` configuration and the host keeps running; only replacing the
+  sole folder of a single-folder window restarts it. Focus reorders folders through
+  `ManagedWorkspaceService`, persisting the focused worktree id to `globalState` first;
+  `activate()` restores it, falling back to the first workspace folder. A malformed
+  `~/.agntree/agntree.code-workspace` is refused, never overwritten.
+- **The Claude Code UI runs in the first workspace folder.** It has no cwd argument, so
+  `prepareWorktree()` moves the worktree's folder first before the availability check. Do
+  not remove that check: a worktree outside the managed workspace must still be refused,
+  with **Open in New Window** as the way out.
 - **Restored terminals carry two identities.** The custom title
   `Agntree: <name> [<shortId>]` identifies a tab after a quit; the PID recorded per
-  workspace folder (`agntree.terminalPids` in `globalState`) identifies a live pty after a
+  workspace (`agntree.terminalPids` in `globalState`, keyed by the workspace file when the
+  managed workspace is open, else the first folder) identifies a live pty after a
   reload. `TerminalManager.beginRestoreSync()` adopts by PID and resumes revived tabs by
   title. Never type into a terminal whose PID matches the record — it is the running
   agent. A rename is durable only after the command starts and only for the active tab.
