@@ -15,7 +15,7 @@ import { SessionImportService } from '../../src/services/SessionImportService';
 import { WorkspaceTreeItem } from '../../src/providers/WorkspacesTreeProvider';
 import { registerChatCommands } from '../../src/commands/chat';
 import { registerSessionImportCommands } from '../../src/commands/sessionImport';
-import { ForkResult, HarnessSession, NativeUiOpenResult } from '../../src/harnesses/types';
+import { ForkResult, HarnessSession, NativeUiOpenResult, TurnState } from '../../src/harnesses/types';
 import { ChatSession, HarnessId, Worktree } from '../../src/types';
 import {
   fakeAdapter,
@@ -46,6 +46,11 @@ function setup(t: { after(fn: () => void): void }, options: { notInstalled?: Har
   /** Sessions that no longer exist natively; chosen IDs have no transcript yet. */
   const missing = new Set<string>();
   const resumable = async (id: string) => !missing.has(id) && !UUID.test(id) && !id.startsWith('pending-');
+  /** What the harnesses report about a process outside Agntree, and live turns. */
+  const live: { runningUntracked: boolean; turnState: TurnState | undefined } = {
+    runningUntracked: false,
+    turnState: undefined,
+  };
   const sessions: Record<HarnessId, HarnessSession[]> = { claude: [], opencode: [], codex: [], pi: [] };
   let pendingForks = 0;
   const claudeUi = fakeNativeUi('Claude Code UI', { contextValueSuffix: 'ClaudeUi' });
@@ -61,6 +66,7 @@ function setup(t: { after(fn: () => void): void }, options: { notInstalled?: Har
       nativeUi: nativeUi?.nativeUi,
       isInstalled: async () => !options.notInstalled?.includes(id),
       isSessionResumable: resumable,
+      isSessionRunning: async () => live.runningUntracked,
       listSessionsForWorktree: async () => sessions[id],
       listSessionsForRepository: async () => sessions[id],
       forkSession: () => forks[id](),
@@ -80,6 +86,8 @@ function setup(t: { after(fn: () => void): void }, options: { notInstalled?: Har
       return true;
     },
     hasUncommittedChanges: () => false,
+    getStagedChanges: () => [],
+    getUnstagedChanges: () => [],
     copyUncommittedChanges: () => true,
   };
   const workspaces = {
@@ -133,6 +141,8 @@ function setup(t: { after(fn: () => void): void }, options: { notInstalled?: Har
       prepare.calls.push(worktree.id);
       prepare.hook?.(worktree);
     },
+    turnState: () => live.turnState,
+    runningSessions: () => 0,
     showWorktree: (worktree) => shown.push(worktree.id),
     removeChats: (ids, options) => {
       ids.forEach((id) => terminals.closeChat(id));
@@ -145,7 +155,7 @@ function setup(t: { after(fn: () => void): void }, options: { notInstalled?: Har
 
   return {
     storage, main, feature, folder, folderRepo, worktrees, missing, sessions, adapters, terminals,
-    claudeUi, codexUi, shown, activated, registrations, needingYou, selectedRows, active, prepare,
+    claudeUi, codexUi, shown, activated, registrations, needingYou, selectedRows, active, prepare, live,
     /** A chat in a worktree (main by default), linked when `sessionId` is given. */
     chat(harness: HarnessId, name: string, sessionId: string | null = null, worktree = main): ChatSession {
       return storage.createChat(worktree.id, harness, name, { harnessSessionId: sessionId });
@@ -247,7 +257,7 @@ test('opening a chat from before chosen IDs gives it one; opening an open chat o
 test('Open in UI stops a running terminal only after confirmation, then hands over the session', async (t) => {
   const f = setup(t);
   const chat = f.chat('claude', 'Running', 'claude-1');
-  await runCommand('agntree.openChat', f.row(chat));
+  await runCommand('agntree.openChatInTerminal', f.row(chat));
   const terminal = f.lastTerminal();
 
   stub.__warningResponses.push(undefined);
@@ -287,7 +297,7 @@ test('Open in UI explains a refusal before touching anything', async (t) => {
   const mismatch = f.chat('claude', 'Mismatch', 'claude-2');
   const codex = f.chat('codex', 'Codex', 'codex-1');
   f.missing.add('gone');
-  await runCommand('agntree.openChat', f.row(mismatch));
+  await runCommand('agntree.openChatInTerminal', f.row(mismatch));
   f.claudeUi.nativeUi.checkAvailability = () => ({ kind: 'workspace-mismatch', uiCwd: '/elsewhere' });
 
   const cases: [ChatSession, string][] = [
@@ -320,21 +330,23 @@ test('a click reveals a session already open in its UI, from the tree or the sta
   assert.equal(f.codexUi.opened.length, 2);
   assert.equal(stub.window.terminals.length, 0, 'no second agent beside the open panel');
 
+  // A closed panel is reopened in the UI; a tracked terminal is focused first.
   f.codexUi.surfaces.open.delete('codex-1');
   await runCommand('agntree.openChat', f.row(chat));
+  assert.equal(f.codexUi.opened.length, 3);
+  await runCommand('agntree.openChatInTerminal', f.row(chat));
   const terminal = f.lastTerminal();
-  f.codexUi.surfaces.open.add('codex-1');
   await runCommand('agntree.openChat', f.row(chat));
-  assert.deepEqual([f.codexUi.opened.length, terminal.shown], [2, 2], 'the live terminal is focused instead');
+  assert.deepEqual([f.codexUi.opened.length, terminal.shown], [3, 2], 'the live terminal is focused instead');
 });
 
-test('with the UI as default, a click uses the UI when it can and the terminal otherwise', async (t) => {
+test('a click opens the official UI first and falls back to a terminal; the default surface only decides new sessions', async (t) => {
   const f = setup(t);
-  stub.__setConfiguration('defaultSessionSurface', 'ui');
   const inUi = f.chat('claude', 'UI', 'claude-ui');
   const fallback = f.chat('claude', 'Fallback', 'claude-fallback');
   const explicit = f.chat('claude', 'Explicit', 'claude-explicit');
 
+  // The default surface stays on Terminal; a click still prefers the panel.
   await runCommand('agntree.openChat', f.row(inUi));
   assert.deepEqual(f.claudeUi.opened.map((open) => open.sessionId), ['claude-ui']);
   f.claudeUi.nativeUi.checkAvailability = () => ({ kind: 'workspace-mismatch', uiCwd: '/elsewhere' });
@@ -346,12 +358,57 @@ test('with the UI as default, a click uses the UI when it can and the terminal o
     'claude --resume claude-explicit',
   ]);
 
+  // The configured surface still starts a new session in the UI.
+  stub.__setConfiguration('defaultSessionSurface', 'ui');
+  await runCommand('agntree.newClaudeChat', f.worktreeRow(f.main));
+  assert.equal(f.claudeUi.opened.at(-1)?.cwd, f.main.path);
+
   // Open in Terminal on a session open in the UI closes that tab first.
   f.claudeUi.surfaces.open.add('claude-ui');
   stub.__warningResponses.push('Close and Open');
   await runCommand('agntree.openChatInTerminal', f.row(inUi));
   assert.ok(f.claudeUi.surfaces.calls.includes('close:claude-ui'));
   assert.equal(f.lastTerminal().sent[0], 'claude --resume claude-ui');
+});
+
+test('a session running outside Agntree opens a choice instead of a silent second process', async (t) => {
+  const f = setup(t);
+  const chat = f.chat('claude', 'Elsewhere', 'claude-elsewhere');
+  f.live.runningUntracked = true;
+
+  stub.__setQuickPickHandler((items) => items[0]);
+  await runCommand('agntree.openChat', f.row(chat));
+  assert.match(await vscode.env.clipboard.readText(), /claude --resume claude-elsewhere/);
+  assert.deepEqual([f.claudeUi.opened.length, stub.window.terminals.length], [0, 0], 'copying opens nothing');
+
+  stub.__setQuickPickHandler((items) => items[1]);
+  stub.__warningResponses.push(undefined);
+  await runCommand('agntree.openChat', f.row(chat));
+  assert.deepEqual([f.claudeUi.opened.length, stub.window.terminals.length], [0, 0], 'declining starts nothing');
+
+  stub.__warningResponses.push('Start Anyway');
+  await runCommand('agntree.openChat', f.row(chat));
+  assert.deepEqual(f.claudeUi.opened.map((open) => open.sessionId), ['claude-elsewhere']);
+});
+
+test('switching surfaces is refused while the agent is working', async (t) => {
+  const f = setup(t);
+  const chat = f.chat('claude', 'Busy', 'claude-busy');
+  await runCommand('agntree.openChatInTerminal', f.row(chat));
+  const terminal = f.lastTerminal();
+  f.live.turnState = 'working';
+
+  // Terminal -> panel: refused before the close prompt.
+  await runCommand('agntree.openClaudeUi', f.row(chat));
+  assert.ok(shown('is working on a turn'), 'panel handoff refused');
+  assert.deepEqual([terminal.disposed, f.claudeUi.opened.length], [false, 0]);
+
+  // Panel -> terminal: refused before the close prompt.
+  const panelChat = f.chat('claude', 'Panel', 'claude-panel');
+  f.claudeUi.surfaces.open.add('claude-panel');
+  await runCommand('agntree.openChatInTerminal', f.row(panelChat));
+  assert.ok(shown('before switching to the terminal'), 'terminal handoff refused');
+  assert.ok(!f.claudeUi.surfaces.calls.includes('close:claude-panel'));
 });
 
 test('a new UI session is a placeholder the importer links; a failed open leaves no row behind', async (t) => {
@@ -400,6 +457,7 @@ test('Fork to New Worktree forks into a new branch worktree; a failed fork or a 
   const f = setup(t);
   const opencode = f.chat('opencode', 'Plan', 'ses_1');
   stub.__inputResponses.push('feature-fork', '/work/demo-feature-fork');
+  stub.__warningResponses.push('Fork');
   await runCommand('agntree.forkChatWithChanges', f.row(opencode));
   const created = f.worktrees.find((worktree) => worktree.name === 'feature-fork')!;
   assert.deepEqual(f.chatsIn(created).map((chat) => [chat.name, chat.harnessSessionId]), [['Plan (1)', 'ses_fork']]);
@@ -409,6 +467,7 @@ test('Fork to New Worktree forks into a new branch worktree; a failed fork or a 
     throw new Error('move failed');
   };
   stub.__inputResponses.push('feature-broken', '/work/demo-broken');
+  stub.__warningResponses.push('Fork');
   await runCommand('agntree.forkChatWithChanges', f.row(opencode));
   assert.ok(shown('Failed to fork the opencode session into the new worktree: move failed'));
   assert.deepEqual(f.chatsIn(f.worktrees.find((worktree) => worktree.name === 'feature-broken')!), []);
@@ -446,8 +505,8 @@ test('Go to Next Session That Needs You opens the longest-waiting one, skips a r
   const waiting = f.chat('claude', 'Waiting', 'claude-1');
   f.needingYou.push('removed-chat', waiting.id);
   await runCommand('agntree.openNextSessionNeedingYou');
-  assert.equal(f.lastTerminal().sent[0], 'claude --resume claude-1');
-  assert.deepEqual(f.activated, [waiting.id], 'its row is selected, which clears the flag');
+  assert.deepEqual(f.claudeUi.opened.map((open) => open.sessionId), ['claude-1']);
+  assert.deepEqual([...new Set(f.activated)], [waiting.id], 'its row is selected, which clears the flag');
 
   f.needingYou.length = 0;
   await runCommand('agntree.openNextSessionNeedingYou');

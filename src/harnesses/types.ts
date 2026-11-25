@@ -234,6 +234,13 @@ export interface HarnessAdapter {
   /** Whether the harness can resume this session (checked before launching). */
   isSessionResumable(sessionId: string, cwd?: string): Promise<boolean>;
 
+  /**
+   * Whether a live process outside Agntree is using this session, when the
+   * harness can tell. Resuming such a session can fork its conversation, so
+   * callers ask first instead of starting a second process silently.
+   */
+  isSessionRunning?(sessionId: string): Promise<boolean>;
+
   listSessionsForWorktree(
     worktreePath: string,
     force?: boolean

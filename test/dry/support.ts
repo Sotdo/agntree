@@ -68,6 +68,9 @@ interface StubControls {
   workspace: {
     workspaceFolders: { uri: { fsPath: string; scheme?: string; authority?: string; name?: string } }[];
     workspaceFile: { fsPath: string } | undefined;
+    fs: {
+      delete(uri: { fsPath: string }, options?: { recursive?: boolean; useTrash?: boolean }): Promise<void>;
+    };
     updateWorkspaceFolders(
       start: number,
       deleteCount: number | null | undefined,

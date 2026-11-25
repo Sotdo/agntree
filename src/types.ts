@@ -22,8 +22,22 @@ export interface Worktree {
   name: string;
   /** The checked-out branch; absent when detached or not git. */
   branch?: string;
+  /** The commit HEAD points at, as git reports it; absent outside git. */
+  head?: string;
   path: string;
   isMain: boolean;
+}
+
+/**
+ * A row in a Project's read-only Branches group. A branch with a worktree
+ * opens that worktree; a detached worktree stands in as its short commit.
+ */
+export interface BranchListing {
+  id: string;
+  repoId: string;
+  name: string;
+  worktree?: Worktree;
+  detached?: boolean;
 }
 
 /**
@@ -98,7 +112,7 @@ export interface PRInfo {
   headRefName?: string;
 }
 
-export type TreeItemType = 'repository' | 'worktree' | 'chat';
+export type TreeItemType = 'repository' | 'worktree' | 'chat' | 'branches' | 'branch';
 
 /** Keys in VS Code `globalState`. Renaming one orphans users' stored data. */
 export const STORAGE_KEYS = {

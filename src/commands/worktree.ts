@@ -7,7 +7,7 @@ import { WorkspaceTreeItem, WorkspacesTreeProvider } from '../providers/Workspac
 import { Repository, Worktree } from '../types';
 import { logOperation } from '../services/OperationLog';
 import { hostUri } from '../utils/hostUri';
-import { commandRegistrar, defaultWorktreePath, promptNewBranchName, withProgress } from './common';
+import { commandRegistrar, defaultWorktreePath, openSessionNote, promptNewBranchName, uncommittedFileCount, withProgress } from './common';
 
 export interface WorktreeCommandDeps {
   storageService: StorageService;
@@ -17,6 +17,8 @@ export interface WorktreeCommandDeps {
   workspacesProvider: Pick<WorkspacesTreeProvider, 'getWorktreeForItem' | 'isGitRepo' | 'getPRUrl'>;
   /** Remove a deleted worktree's chats and clear the panels if they show it. */
   forgetWorktrees: (worktrees: Worktree[]) => void;
+  /** Sessions with a live terminal or native-UI tab in a worktree, for preflights. */
+  runningSessions: (worktreeId: string) => number;
   refreshTree: () => void;
 }
 
@@ -55,6 +57,19 @@ export function registerWorktreeCommands(context: vscode.ExtensionContext, deps:
     const terminal = vscode.window.createTerminal({ name, cwd });
     terminal.show();
     return terminal;
+  };
+
+  /** Move a worktree directory to the Trash; false when this host cannot. */
+  const moveToTrash = async (target: string): Promise<boolean> => {
+    try {
+      await vscode.workspace.fs.delete(hostUri(target), { recursive: true, useTrash: true });
+      return true;
+    } catch (error) {
+      logOperation(
+        `Could not move ${target} to the Trash: ${error instanceof Error ? error.message : String(error)}`
+      );
+      return false;
+    }
   };
 
   register('agntree.addWorktree', async (item?: WorkspaceTreeItem) => {
@@ -183,22 +198,27 @@ export function registerWorktreeCommands(context: vscode.ExtensionContext, deps:
       return;
     }
 
-    const dirty = gitService.hasUncommittedChanges(worktree.path);
+    const changes = uncommittedFileCount(gitService, worktree.path);
+    const dirty = changes > 0;
     const sessionCount = storageService.getChatsByWorktree(worktree.id).length;
+    const running = deps.runningSessions(worktree.id);
     const lines = [
       `Delete worktree "${worktree.name}"?`,
-      'Its directory will be removed from disk (this is not sent to the Trash).',
+      'Its directory moves to the Trash; emptying the Trash is permanent.',
     ];
     if (sessionCount > 0) {
       lines.push(
         `Its ${sessionCount} session row(s) leave the list and their terminals close. The agents keep the conversations.`
       );
     }
-    if (dirty) {
-      lines.push('⚠️ WARNING: This worktree has uncommitted changes that will be lost!');
+    if (running > 0) {
+      lines.push(`${running} agent session(s) are open in this worktree. Their terminals close first.`);
     }
-    const worktreeOnly = dirty ? 'Delete Worktree Only (force)' : 'Delete Worktree Only';
-    const withBranch = dirty ? 'Delete Worktree & Branch (force)' : 'Delete Worktree & Branch';
+    if (dirty) {
+      lines.push(`⚠️ ${changes} uncommitted change(s) move to the Trash with it.`);
+    }
+    const worktreeOnly = 'Delete Worktree Only';
+    const withBranch = 'Delete Worktree & Branch';
     // A detached worktree has no branch of its own to delete.
     const { branch } = worktree;
     const choice = await vscode.window.showWarningMessage(
@@ -212,14 +232,23 @@ export function registerWorktreeCommands(context: vscode.ExtensionContext, deps:
     const deleteBranch = choice === withBranch;
 
     // Close its terminals first: an agent still running in the directory can
-    // block the removal or write into it. A failed removal leaves no tombstone,
-    // so the sessions import again.
+    // block the removal or keep writing into it. A failed removal leaves no
+    // tombstone, so the sessions import again.
     storageService.removePRWorktree(worktree.id);
     deps.forgetWorktrees([worktree]);
-    if (!gitService.removeWorktree(repo.rootPath, worktree.path, dirty)) {
+    const trashed = await moveToTrash(worktree.path);
+    // A host without a usable Trash still deletes, permanently, after the same
+    // confirmation; the operation log and the message say which happened.
+    if (!trashed && !gitService.removeWorktree(repo.rootPath, worktree.path, dirty)) {
       logOperation(`Failed to delete worktree "${worktree.name}" at ${worktree.path}`);
       vscode.window.showErrorMessage('Failed to delete worktree. Check the Output panel for details.');
       return;
+    }
+    if (!gitService.pruneWorktrees(repo.rootPath)) {
+      logOperation(`Could not prune worktrees after deleting "${worktree.name}"`);
+    }
+    if (!trashed) {
+      logOperation(`No Trash available; deleted worktree "${worktree.name}" permanently at ${worktree.path}`);
     }
     await managedWorkspace.remove([worktree.path]).catch((error: unknown) => {
       logOperation(
@@ -227,13 +256,14 @@ export function registerWorktreeCommands(context: vscode.ExtensionContext, deps:
       );
     });
     logOperation(
-      `Deleted worktree "${worktree.name}" at ${worktree.path}` +
+      `${trashed ? 'Moved worktree to the Trash' : 'Deleted worktree'} "${worktree.name}" at ${worktree.path}` +
         (branch && deleteBranch ? ` and branch "${branch}"` : '')
     );
+    const outcome = trashed ? `Moved worktree "${worktree.name}" to the Trash` : `Deleted worktree "${worktree.name}" permanently`;
     if (!branch || !deleteBranch) {
-      vscode.window.showInformationMessage(`Deleted worktree "${worktree.name}"`);
+      vscode.window.showInformationMessage(outcome);
     } else if (gitService.deleteBranch(repo.rootPath, branch, true)) {
-      vscode.window.showInformationMessage(`Deleted worktree and branch "${worktree.name}"`);
+      vscode.window.showInformationMessage(`${outcome} and branch "${branch}"`);
     } else {
       logOperation(`Failed to delete branch "${worktree.name}" after removing worktree`);
       vscode.window.showWarningMessage(
@@ -266,23 +296,30 @@ export function registerWorktreeCommands(context: vscode.ExtensionContext, deps:
       return;
     }
     const source = selected.label;
-
-    if (gitService.hasUncommittedChanges(target.path)) {
-      const proceed = await vscode.window.showWarningMessage(
-        `"${target.name}" has uncommitted changes. Commit or stash them before merging.`,
-        'Merge Anyway',
-        'Cancel'
-      );
-      if (proceed !== 'Merge Anyway') {
-        return;
-      }
+    const changes = uncommittedFileCount(gitService, target.path);
+    const preflight = [
+      `Merge "${source}" into "${target.name}"?`,
+      `Branch: ${source} → ${target.branch ?? 'detached HEAD'}`,
+      `Worktree: ${target.path}`,
+      changes === 0 ? 'No uncommitted changes.' : `${changes} uncommitted change(s) will stay uncommitted.`,
+      openSessionNote(deps.runningSessions(target.id)),
+    ];
+    const proceed = await vscode.window.showWarningMessage(
+      preflight.join('\n\n'),
+      { modal: true },
+      'Merge'
+    );
+    if (proceed !== 'Merge') {
+      return;
     }
 
     const result = gitService.mergeBranch(target.path, source);
     if (result.success) {
+      logOperation(`Merged "${source}" into "${target.name}" at ${target.path}`);
       vscode.window.showInformationMessage(`Successfully merged "${source}" into "${target.name}"`);
       refreshTree();
     } else if (/conflict/i.test(result.error ?? '')) {
+      logOperation(`Merge of "${source}" into "${target.name}" stopped on conflicts`);
       const choice = await vscode.window.showWarningMessage(
         `Merge conflicts detected. Resolve them in "${target.name}" and commit.`,
         'Open in Terminal'
@@ -291,6 +328,7 @@ export function registerWorktreeCommands(context: vscode.ExtensionContext, deps:
         openTerminal(`Git: ${target.name}`, target.path).sendText('git status');
       }
     } else {
+      logOperation(`Failed to merge "${source}" into "${target.name}": ${result.error ?? 'unknown error'}`);
       vscode.window.showErrorMessage(`Failed to merge: ${result.error || 'Unknown error'}`);
     }
   });
@@ -375,6 +413,7 @@ export function registerWorktreeCommands(context: vscode.ExtensionContext, deps:
     if (uncommitted > 0) {
       details.push(`${uncommitted} uncommitted change(s) will be auto-stashed`);
     }
+    details.push(openSessionNote(deps.runningSessions(worktree.id)));
     const proceed = await vscode.window.showQuickPick(
       [
         { label: '$(check) Proceed with Rebase', description: details.join(' · '), proceed: true },
@@ -394,13 +433,16 @@ export function registerWorktreeCommands(context: vscode.ExtensionContext, deps:
       gitService.rebase(worktree.path, target)
     );
     if (result.success) {
+      logOperation(`Rebased "${worktree.name}" onto ${target}`);
       vscode.window.showInformationMessage(`Successfully rebased "${worktree.name}" onto ${target}`);
       refreshTree();
     } else if (gitService.isRebaseInProgress(worktree.path)) {
+      logOperation(`Rebase of "${worktree.name}" onto ${target} paused on conflicts`);
       vscode.window.showWarningMessage(
         'Rebase paused due to conflicts. Resolve conflicts and use the rebase controls in the Changes panel.'
       );
     } else {
+      logOperation(`Rebase of "${worktree.name}" onto ${target} failed: ${result.error ?? 'unknown error'}`);
       vscode.window.showErrorMessage(`Rebase failed: ${result.error || 'Unknown error'}`);
     }
     void vscode.commands.executeCommand('agntree.refreshChanges');
@@ -481,11 +523,28 @@ export function registerWorktreeCommands(context: vscode.ExtensionContext, deps:
     }
 
     const { number, headRefName } = pr;
+    const worktreePath = defaultWorktreePath(repo, headRefName);
+    const preflight = [
+      `Check out PR #${number}?`,
+      pr.title,
+      `Branch: ${localBranch}, fetched from ${headRefName}`,
+      `Worktree: ${worktreePath}`,
+    ];
+    const proceeded = await vscode.window.showWarningMessage(
+      preflight.join('\n\n'),
+      { modal: true },
+      'Check Out'
+    );
+    if (proceeded !== 'Check Out') {
+      return;
+    }
+
     const created = await withProgress(`Checking out PR #${number}...`, async () =>
       (await gitHubService.fetchPRBranch(repo.rootPath, number, localBranch)) &&
-      gitService.createWorktree(repo.rootPath, localBranch, defaultWorktreePath(repo, headRefName))
+      gitService.createWorktree(repo.rootPath, localBranch, worktreePath)
     );
     if (!created) {
+      logOperation(`Failed to check out PR #${number} into ${worktreePath}`);
       vscode.window.showErrorMessage(
         `Failed to checkout PR #${number}. The PR may not exist or fetching from the remote failed.`
       );
@@ -495,6 +554,7 @@ export function registerWorktreeCommands(context: vscode.ExtensionContext, deps:
     if (worktree) {
       storageService.setPRWorktree(worktree.id, number);
     }
+    logOperation(`Checked out PR #${number} (${headRefName}) into ${worktreePath}`);
     vscode.window.showInformationMessage(`Checked out PR #${number}: ${headRefName}`);
     refreshTree();
   });

@@ -4,6 +4,7 @@ import { GitService } from '../services/GitService';
 import { TerminalManager } from '../services/TerminalManager';
 import { HarnessWatcherRegistry } from '../services/HarnessWatcherRegistry';
 import { SessionImportService } from '../services/SessionImportService';
+import { logOperation } from '../services/OperationLog';
 import { WorkspaceTreeItem, WorkspacesTreeProvider } from '../providers/WorkspacesTreeProvider';
 import { ChatSession, HarnessId, Worktree, generateId } from '../types';
 import { HarnessRegistry } from '../harnesses/HarnessRegistry';
@@ -13,6 +14,7 @@ import {
   NativeUiCapability,
   NativeUiOpenResult,
   NativeUiUnavailable,
+  TurnState,
 } from '../harnesses/types';
 import { DEFAULT_CHAT_NAME, chatPrimarySessionId } from '../harnesses/sessionUtils';
 import { errorMessage, formatRelativeTime, nextForkName } from '../utils/text';
@@ -23,8 +25,10 @@ import {
   commandRegistrar,
   defaultWorktreePath,
   noHarnessInstalledMessage,
+  openSessionNote,
   pickWorktree,
   promptNewBranchName,
+  uncommittedFileCount,
 } from './common';
 
 type SessionSurface = 'terminal' | 'ui';
@@ -53,6 +57,10 @@ export interface ChatCommandDeps {
   showWorktree: (worktree: Worktree) => void;
   /** Point the panels at a worktree and move it first in the managed workspace. */
   prepareWorktree: (worktree: Worktree) => Promise<void>;
+  /** The chat's live turn state, so a surface handoff never kills a running turn. */
+  turnState: (chatId: string) => TurnState | undefined;
+  /** Sessions with a live terminal or native-UI tab in a worktree, for preflights. */
+  runningSessions: (worktreeId: string) => number;
   /** Close chats' terminals, delete their rows, and clear the selection if it was one of them. */
   removeChats: (chatIds: string[], options?: { rememberSession?: boolean }) => string[];
   refreshTree: () => void;
@@ -83,6 +91,8 @@ export function registerChatCommands(
     activateChat,
     prepareWorktree,
     showWorktree,
+    turnState,
+    runningSessions,
     removeChats,
     refreshTree,
   } = deps;
@@ -201,6 +211,70 @@ export function registerChatCommands(
     await terminalManager.openChat(prepared, worktree);
     selectChat(prepared, worktree);
   };
+
+  /** The command that resumes this chat from any terminal. */
+  const resumeCommand = (chat: ChatSession, worktree: Worktree): string => {
+    const resume = harnessRegistry
+      .get(chat.harness)
+      .buildLaunchCommand({ worktreePath: worktree.path, sessionId: chat.harnessSessionId });
+    return `cd ${quoteShellArgument(worktree.path)} && ${resume}`;
+  };
+
+  /**
+   * A process outside Agntree is using this session. A tracked terminal or an
+   * open native-UI tab is not "outside"; anything else the harness reports is.
+   */
+  const isRunningUntracked = async (chat: ChatSession): Promise<boolean> => {
+    const sessionId = chatPrimarySessionId(chat);
+    if (!sessionId || terminalManager.isActive(chat.id)) {
+      return false;
+    }
+    const nativeUi = harnessRegistry.get(chat.harness).nativeUi;
+    if (nativeUi?.surfaces?.isOpen(sessionId)) {
+      return false;
+    }
+    return (await harnessRegistry.get(chat.harness).isSessionRunning?.(sessionId)) ?? false;
+  };
+
+  /**
+   * Offer the resume command or a confirmed second process for a session that
+   * is already running elsewhere. Returns false when the caller must stop.
+   */
+  const confirmRunningUntracked = async (chat: ChatSession, worktree: Worktree): Promise<boolean> => {
+    const choice = await vscode.window.showQuickPick(
+      [
+        {
+          label: '$(clippy) Copy Resume Command',
+          detail: 'Use it in the terminal or app where this session is already running.',
+          value: 'copy',
+        },
+        {
+          label: '$(terminal) Start Another Process…',
+          detail: 'Agntree cannot see the running process; a second one may fork the conversation.',
+          value: 'start',
+        },
+      ],
+      { placeHolder: `"${chat.name}" is already running outside Agntree` }
+    );
+    if (choice?.value === 'copy') {
+      const command = resumeCommand(chat, worktree);
+      await vscode.env.clipboard.writeText(command);
+      vscode.window.showInformationMessage(`Copied: ${command}`);
+      return false;
+    }
+    if (choice?.value !== 'start') {
+      return false;
+    }
+    const confirm = await vscode.window.showWarningMessage(
+      `Start another process for "${chat.name}"?\n\nThe running session keeps going; two processes writing one conversation can fork it.`,
+      { modal: true },
+      'Start Anyway'
+    );
+    return confirm === 'Start Anyway';
+  };
+
+  /** Surface changes are allowed only while the agent is not mid-turn. */
+  const isWorking = (chat: ChatSession): boolean => turnState(chat.id) === 'working';
 
   /**
    * Start a new session in the agent's VS Code UI. The extension assigns the
@@ -349,6 +423,12 @@ export function registerChatCommands(
     }
 
     if (!open && terminalManager.isActive(chat.id)) {
+      if (isWorking(chat)) {
+        vscode.window.showInformationMessage(
+          `"${chat.name}" is working on a turn. Wait for it to finish before switching to ${nativeUi.displayName}.`
+        );
+        return;
+      }
       const confirm = await vscode.window.showWarningMessage(
         `Close the terminal for "${chat.name}"?\n\nThe running ${adapter.displayName} process stops. The conversation is preserved and will open in ${nativeUi.displayName}.`,
         { modal: true },
@@ -383,8 +463,8 @@ export function registerChatCommands(
   };
 
   /**
-   * Whether a UI default can open this chat without asking anything: it has a
-   * native session, no terminal owns it, and the UI can open its worktree.
+   * Whether the official UI can open this chat without asking anything: it
+   * has a native session, no terminal owns it, and the UI can open its worktree.
    */
   const canOpenInNativeUi = (
     chat: ChatSession,
@@ -398,38 +478,43 @@ export function registerChatCommands(
     nativeUi.checkAvailability(worktree.path).kind === 'available';
 
   /**
-   * Open a chat the way a row click does. Shared by the row click and the
-   * starred-session picker so both obey "never two agent processes for one
-   * session".
+   * Open a chat the way a row click does: the terminal Agntree tracks, then
+   * the agent's official UI, then a terminal resume. A session already running
+   * somewhere Agntree cannot see is never resumed silently. Shared by the row
+   * click and the starred-session picker.
    */
   const openChatPrimary = async (chat: ChatSession, worktree: Worktree): Promise<void> => {
-    // Focus first so a UI default sees this worktree as the first folder.
+    // Focus first so the UI's folder check sees this worktree as the first folder.
     await prepareWorktree(worktree);
     const nativeUi = harnessRegistry.get(chat.harness).nativeUi;
     const sessionId = chatPrimarySessionId(chat);
     const terminalOpen = terminalManager.isActive(chat.id);
 
-    // A session already open in its agent's UI is revealed, not duplicated in
-    // a terminal. A live terminal stays the surface a click focuses.
-    if (nativeUi && sessionId && nativeUi.surfaces?.isOpen(sessionId) && !terminalOpen) {
+    // A live terminal Agntree tracks is the surface a click focuses.
+    if (terminalOpen) {
+      await openInTerminal(chat, worktree);
+      return;
+    }
+
+    // An open panel is tracked too; reveal it rather than open a second process.
+    if (nativeUi && sessionId && nativeUi.surfaces?.isOpen(sessionId)) {
       await openChatInNativeUi(chat, worktree, nativeUi);
       return;
     }
 
     // A UI-started chat has no native ID until its first prompt; a click must
     // not start a second agent beside the open conversation.
-    if (chat.pendingUiLaunch && !terminalOpen) {
+    if (chat.pendingUiLaunch) {
       vscode.window.showInformationMessage(pendingUiMessage(nativeUi?.displayName));
       return;
     }
 
-    // The configured default is a preference: use the UI when it can open the
-    // session, otherwise keep the action useful in the terminal.
-    if (
-      defaultSessionSurface() === 'ui' &&
-      nativeUi &&
-      canOpenInNativeUi(chat, worktree, nativeUi)
-    ) {
+    if ((await isRunningUntracked(chat)) && !(await confirmRunningUntracked(chat, worktree))) {
+      return;
+    }
+
+    // The official UI is the primary surface; the terminal is the fallback.
+    if (nativeUi && canOpenInNativeUi(chat, worktree, nativeUi)) {
       await openChatInNativeUi(chat, worktree, nativeUi);
       return;
     }
@@ -454,9 +539,13 @@ export function registerChatCommands(
       return;
     }
     const worktree = chatWorktree(chat);
-    if (worktree) {
-      await openChatInNativeUi(chat, worktree, nativeUi);
+    if (!worktree) {
+      return;
     }
+    if ((await isRunningUntracked(chat)) && !(await confirmRunningUntracked(chat, worktree))) {
+      return;
+    }
+    await openChatInNativeUi(chat, worktree, nativeUi);
   };
 
   /** Create the forked chat and open it. Shared by both fork commands. */
@@ -633,9 +722,19 @@ export function registerChatCommands(
         }
       }
 
+      if ((await isRunningUntracked(chat)) && !(await confirmRunningUntracked(chat, worktree))) {
+        return;
+      }
+
       const nativeUi = harnessRegistry.get(chat.harness).nativeUi;
       const sessionId = chatPrimarySessionId(chat);
       if (nativeUi?.surfaces && sessionId && nativeUi.surfaces.isOpen(sessionId)) {
+        if (isWorking(chat)) {
+          vscode.window.showInformationMessage(
+            `"${chat.name}" is working on a turn. Wait for it to finish before switching to the terminal.`
+          );
+          return;
+        }
         const confirm = await vscode.window.showWarningMessage(
           `Close the ${nativeUi.displayName} tab for "${chat.name}"?\n\nThe UI session stops running. The conversation will resume in a terminal.`,
           { modal: true },
@@ -802,6 +901,23 @@ export function registerChatCommands(
       return;
     }
 
+    const changes = uncommittedFileCount(gitService, worktree.path);
+    const preflight = [
+      `Fork "${chat.name}" into a new worktree?`,
+      `New branch: ${branch}`,
+      `Worktree: ${worktreePath}`,
+      changes === 0 ? 'No uncommitted changes to copy.' : `${changes} uncommitted change(s) will be copied.`,
+      openSessionNote(runningSessions(worktree.id)),
+    ];
+    const confirmed = await vscode.window.showWarningMessage(
+      preflight.join('\n\n'),
+      { modal: true },
+      'Fork'
+    );
+    if (confirmed !== 'Fork') {
+      return;
+    }
+
     const baseCommit = gitService.getCurrentCommit(worktree.path);
     if (
       !gitService.createWorktreeWithNewBranch(repo.rootPath, branch, worktreePath, baseCommit || 'HEAD')
@@ -837,6 +953,7 @@ export function registerChatCommands(
       return;
     }
     await openFork(chat, newWorktree, fork);
+    logOperation(`Forked "${chat.name}" into worktree "${branch}" at ${worktreePath}`);
     vscode.window.showInformationMessage(`Forked session to new worktree "${branch}"`);
   });
 
@@ -885,10 +1002,7 @@ export function registerChatCommands(
     const chat = linkedRowChat(item);
     const worktree = chat && chatWorktree(chat);
     if (chat && worktree) {
-      const resume = harnessRegistry
-        .get(chat.harness)
-        .buildLaunchCommand({ worktreePath: worktree.path, sessionId: chat.harnessSessionId });
-      const command = `cd ${quoteShellArgument(worktree.path)} && ${resume}`;
+      const command = resumeCommand(chat, worktree);
       await vscode.env.clipboard.writeText(command);
       vscode.window.showInformationMessage(`Copied: ${command}`);
     }

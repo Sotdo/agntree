@@ -94,6 +94,12 @@ export class ClaudeHarness implements HarnessAdapter {
   async isSessionResumable(sessionId: string): Promise<boolean> {
     return this.sessionService.isSessionResumable(sessionId);
   }
+
+  /** `agents --json` lists the processes Claude runs, including ones Agntree did not start. */
+  async isSessionRunning(sessionId: string): Promise<boolean> {
+    const states = await this.agentsService.getStates({ ignoreEnabled: true });
+    return states.has(sessionId);
+  }
   async listSessionsForWorktree(worktreePath: string): Promise<HarnessSession[]> {
     const sessions = await this.sessionService.findSessionsForWorktree(worktreePath);
     return sessions.map(toHarnessSession);

@@ -670,15 +670,15 @@
               "ui"
             ],
             "enumDescriptions": [
-              "Sessions open in a terminal running the agent CLI.",
-              "Sessions open in the agent's own VS Code extension panel (Claude Code and Codex). Agents without one, and sessions the panel cannot open, use the terminal."
+              "New sessions start in a terminal running the agent CLI.",
+              "New sessions start in the agent's own VS Code extension panel (Claude Code and Codex). Agents without one, and sessions the panel cannot open, use the terminal."
             ],
             "default": "terminal",
             "enumItemLabels": [
               "Terminal",
               "Agent's VS Code panel"
             ],
-            "markdownDescription": "Where a session opens when you click its row or start a new one. The **In Terminal** and **In UI** commands in the New Session menu always override this.",
+            "markdownDescription": "Where a **new** session starts. Clicking an existing session opens its official panel first and falls back to a terminal; use **Open Session in Terminal** for the other direction. The **In Terminal** and **In UI** commands in the New Session menu always override this.",
             "order": 2
           },
           "agntree.autoImport.enabled": {

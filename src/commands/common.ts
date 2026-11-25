@@ -22,6 +22,22 @@ export function withProgress<T>(title: string, task: () => Thenable<T> | T): The
   );
 }
 
+/** Files with staged or unstaged changes, counted once by path. */
+export function uncommittedFileCount(gitService: GitService, worktreePath: string): number {
+  const paths = [
+    ...gitService.getStagedChanges(worktreePath),
+    ...gitService.getUnstagedChanges(worktreePath),
+  ].map((change) => change.path);
+  return new Set(paths).size;
+}
+
+/** One preflight line about the agents running in a worktree. */
+export function openSessionNote(count: number): string {
+  return count === 0
+    ? 'No agent session is open in this worktree.'
+    : `${count} agent session(s) are open in this worktree.`;
+}
+
 /**
  * Ask for a worktree across every stored workspace root. A plain folder is its
  * own only worktree and is listed once under its name.

@@ -4,7 +4,7 @@ import * as vscode from 'vscode';
 import { WorkspaceTreeItem, WorkspacesTreeProvider } from '../../src/providers/WorkspacesTreeProvider';
 import { HarnessRegistry } from '../../src/harnesses/HarnessRegistry';
 import { HarnessAdapter, SessionMetadata } from '../../src/harnesses/types';
-import { ChatSession, Repository, RepositoryWorktrees, Worktree } from '../../src/types';
+import { ChatSession, BranchListing, Repository, RepositoryWorktrees, Worktree } from '../../src/types';
 import { fakeAdapter, fakeNativeUi, makeStorage, stub, waitFor, worktreeRecord } from './support';
 
 beforeEach(() => stub.__reset());
@@ -17,7 +17,8 @@ function provider(
   t: { after(fn: () => void): void },
   storage: ReturnType<typeof makeStorage>,
   listWorktrees: (repo: Repository) => RepositoryWorktrees,
-  adapters: HarnessAdapter[]
+  adapters: HarnessAdapter[],
+  listBranches: (repo: Repository) => string[] = () => []
 ) {
   const tree = new WorkspacesTreeProvider(
     storage,
@@ -25,6 +26,8 @@ function provider(
       listRepositoryWorktrees: (_rootPath: string, repoId: string) =>
         listWorktrees(storage.getRepository(repoId)!),
       getAheadBehind: () => null,
+      getLocalBranches: (rootPath: string) =>
+        listBranches(storage.getRepositories().find((repo) => repo.rootPath === rootPath)!),
     } as never,
     terminals as never,
     new HarnessRegistry(adapters),
@@ -124,6 +127,50 @@ test('tooltips brief the last exchange; a lazy harness fetches its preview only 
   await tree.resolveTreeItem(opencode, opencode as WorkspaceTreeItem);
   assert.ok(exported());
   assert.match(tooltip(opencode) ?? '', /opencode prompt[\s\S]*provider\/model · build/);
+});
+
+test('a Project lists its local branches; a branch with a worktree opens it, one without is greyed', async (t) => {
+  const storage = makeStorage();
+  const repo = storage.addRepository('demo', '/work/demo');
+  const main = worktreeRecord({ id: 'wt-main', repoId: repo.id, name: 'main', branch: 'main', path: '/work/demo' });
+  const feature = worktreeRecord({
+    id: 'wt-feature',
+    repoId: repo.id,
+    name: 'feature',
+    branch: 'feature/x',
+    path: '/work/feature',
+    isMain: false,
+  });
+  const detached = worktreeRecord({
+    id: 'wt-detached',
+    repoId: repo.id,
+    name: 'release',
+    path: '/work/release',
+    isMain: false,
+    head: 'abcdef1234567',
+  });
+  const tree = provider(
+    t,
+    storage,
+    () => ({ isGit: true, worktrees: [main, feature, detached] }),
+    [fakeAdapter('claude')],
+    () => ['feature/x', 'main', 'unused']
+  );
+
+  const [repoRow] = await tree.getChildren();
+  const children = await tree.getChildren(repoRow);
+  assert.deepEqual(children.map((item) => item.label), ['main', 'feature', 'release', 'Branches'], 'worktrees, then the group');
+  const group = children.at(-1)!;
+  assert.equal(group.collapsibleState, vscode.TreeItemCollapsibleState.Collapsed);
+
+  const rows = await tree.getChildren(group);
+  assert.deepEqual(rows.map((item) => item.label), ['feature/x', 'main', 'unused', 'abcdef1']);
+  assert.deepEqual(rows.map((item) => item.description), ['feature', undefined, 'no worktree', 'detached · release']);
+  assert.equal((rows[0].data as BranchListing).worktree?.id, 'wt-feature');
+  assert.equal((rows[2].data as BranchListing).worktree, undefined);
+  assert.equal((rows[3].data as BranchListing).worktree?.id, 'wt-detached');
+  assert.equal(tree.getParent(rows[0])?.label, 'Branches', 'reveal goes through the group');
+  assert.equal(tree.getParent(group)?.label, 'demo');
 });
 
 test('worktree lookups list each repository at most once', (t) => {

@@ -8,7 +8,7 @@ import { GitHubService } from '../../src/services/GitHubService';
 import { ManagedWorkspaceService } from '../../src/services/ManagedWorkspaceService';
 import { registerWorktreeCommands } from '../../src/commands/worktree';
 import { Worktree } from '../../src/types';
-import { makeStorage, runCommand, shown, stub, tempDir } from './support';
+import { makeStorage, runCommand, shown, shownMessages, stub, tempDir } from './support';
 
 beforeEach(() => stub.__reset());
 
@@ -44,6 +44,7 @@ function setup(t: { after(fn: () => void): void }) {
     },
     forgetWorktrees: (worktrees) =>
       forgotten.push(...worktrees.map((w) => ({ path: w.path, existed: fs.existsSync(w.path) }))),
+    runningSessions: () => 0,
     refreshTree: () => undefined,
   });
   const worktreeAt = (worktreePath: string) =>
@@ -103,8 +104,28 @@ test('Delete Worktree closes its sessions before removing the directory, and a d
   const confirmation = stub.__messages.find((args) => String(args[0]).startsWith('Delete worktree'))!;
   assert.deepEqual(confirmation.slice(2), ['Delete Worktree Only'], 'no branch to delete');
   assert.equal(fs.existsSync(detached), false);
+  assert.deepEqual(stub.__deleted.at(-1)?.options, { recursive: true, useTrash: true }, 'the directory goes to the Trash');
   assert.deepEqual(forgotten, [{ path: detached, existed: true }]);
   assert.deepEqual(branches(), ['main', 'release']);
+});
+
+test('a host without a usable Trash deletes the worktree permanently and says so', async (t) => {
+  const { scratch, repoPath, worktreeAt } = setup(t);
+  const linked = path.join(scratch, 'app-feature');
+  git(repoPath, 'worktree', 'add', '-q', '-b', 'feature', linked);
+  const trash = stub.workspace.fs.delete;
+  stub.workspace.fs.delete = async () => {
+    throw new Error('no trash on this host');
+  };
+  t.after(() => {
+    stub.workspace.fs.delete = trash;
+  });
+
+  stub.__warningResponses.push('Delete Worktree Only');
+  await runCommand('agntree.deleteWorktree', { itemType: 'worktree', data: worktreeAt(linked) });
+
+  assert.equal(fs.existsSync(linked), false);
+  assert.match(shownMessages().at(-1) ?? '', /permanently/);
 });
 
 test('Delete Worktree & Branch removes the worktree and its branch', async (t) => {

@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { ChatSession, Worktree } from './types';
+import { ChatSession, BranchListing, Worktree } from './types';
 import { StorageService } from './services/StorageService';
 import { WorktreeCatalog } from './services/WorktreeCatalog';
 import { GitService } from './services/GitService';
@@ -84,6 +84,9 @@ export async function activate(context: vscode.ExtensionContext) {
    * native-UI tab. The tree, attention tick, and importer all use it.
    */
   const isChatOpen = (chat: ChatSession): boolean => terminalManager.isActive(chat.id) || hasOpenNativeUi(chat);
+  /** Sessions with a live terminal or native-UI tab in a worktree, for preflights. */
+  const runningSessionCount = (worktreeId: string): number =>
+    storageService.getChatsByWorktree(worktreeId).filter(isChatOpen).length;
 
   /** The chat whose native-UI tab is the active editor tab, if any. */
   const activeNativeUiChatId = (): string | undefined => {
@@ -328,6 +331,7 @@ export async function activate(context: vscode.ExtensionContext) {
     managedWorkspace,
     workspacesProvider,
     forgetWorktrees,
+    runningSessions: runningSessionCount,
     refreshTree,
   });
   registerChatCommands(context, {
@@ -344,6 +348,8 @@ export async function activate(context: vscode.ExtensionContext) {
     activateChat,
     prepareWorktree: (worktree) => focusWorktree(worktree, { reorder: true }),
     showWorktree,
+    turnState: (chatId) => attentionService.getTurnState(chatId),
+    runningSessions: runningSessionCount,
     removeChats,
     refreshTree,
   });
@@ -416,6 +422,16 @@ export async function activate(context: vscode.ExtensionContext) {
     workspacesTreeView.onDidChangeSelection(({ selection: [selected, ...others] }) => {
       // Selecting several rows prepares a bulk action; it is not a visit.
       if (!selected || others.length > 0) {
+        return;
+      }
+      if (selected.itemType === 'branch') {
+        const listing = selected.data as BranchListing;
+        if (listing.worktree) {
+          void focusWorktree(listing.worktree, { reorder: true });
+          void workspacesTreeView
+            .reveal(workspacesProvider.getTreeItemForWorktree(listing.worktree), { select: true, focus: false, expand: true })
+            .then(undefined, () => undefined);
+        }
         return;
       }
       if (selected.itemType === 'chat') {

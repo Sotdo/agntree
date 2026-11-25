@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
-import { Repository, RepositoryWorktrees, Worktree, ChatSession, TreeItemType } from '../types';
+import { BranchListing, Repository, RepositoryWorktrees, Worktree, ChatSession, TreeItemType } from '../types';
 import { StorageService } from '../services/StorageService';
 import { GitService } from '../services/GitService';
 import { GitHubService } from '../services/GitHubService';
@@ -24,7 +24,7 @@ export class WorkspaceTreeItem extends vscode.TreeItem {
     public readonly label: string,
     public readonly collapsibleState: vscode.TreeItemCollapsibleState,
     public readonly itemType: TreeItemType,
-    public readonly data: Repository | Worktree | ChatSession,
+    public readonly data: Repository | Worktree | ChatSession | BranchListing,
     public readonly contextValue: string
   ) {
     super(label, collapsibleState);
@@ -44,6 +44,8 @@ export class WorkspacesTreeProvider implements vscode.TreeDataProvider<Workspace
 
   /** Worktrees per repository id, kept until the next hard refresh. */
   private readonly worktreeCache = new Map<string, RepositoryWorktrees>();
+  /** Local branches per repository id, read when the group is expanded. */
+  private readonly branchCache = new Map<string, { branches: string[]; fetchedAt: number }>();
   /** Ahead/behind counts per worktree path. */
   private readonly syncCache = new Map<string, { ahead: number; behind: number; fetchedAt: number }>();
 
@@ -62,6 +64,7 @@ export class WorkspacesTreeProvider implements vscode.TreeDataProvider<Workspace
     if (this.pendingCacheClear) {
       this.pendingCacheClear = false;
       this.worktreeCache.clear();
+      this.branchCache.clear();
       this.gitHubService.clearCache();
     }
     this.updateRepoWatchers();
@@ -204,6 +207,13 @@ export class WorkspacesTreeProvider implements vscode.TreeDataProvider<Workspace
       const worktree = this.getWorktreeById((element.data as ChatSession).worktreeId);
       return worktree ? this.getTreeItemForWorktree(worktree) : undefined;
     }
+    if (element.itemType === 'branch') {
+      const repo = this.storageService.getRepository((element.data as BranchListing).repoId);
+      return repo ? this.branchesItem(repo, vscode.TreeItemCollapsibleState.Expanded) : undefined;
+    }
+    if (element.itemType === 'branches') {
+      return this.repositoryItem(element.data as Repository, vscode.TreeItemCollapsibleState.Expanded);
+    }
     if (element.itemType === 'worktree') {
       const repo = this.storageService.getRepository((element.data as Worktree).repoId);
       return repo ? this.repositoryItem(repo, vscode.TreeItemCollapsibleState.Expanded) : undefined;
@@ -218,10 +228,15 @@ export class WorkspacesTreeProvider implements vscode.TreeDataProvider<Workspace
     if (element.itemType === 'repository') {
       const repo = element.data as Repository;
       const { isGit, worktrees } = this.getRepoWorktrees(repo);
-      return isGit ? this.worktreeRows(repo, worktrees) : this.chatRows(worktrees[0]);
+      return isGit
+        ? [...this.worktreeRows(repo, worktrees), this.branchesItem(repo, vscode.TreeItemCollapsibleState.Collapsed)]
+        : this.chatRows(worktrees[0]);
     }
     if (element.itemType === 'worktree') {
       return this.chatRows(element.data as Worktree);
+    }
+    if (element.itemType === 'branches') {
+      return this.branchRows(element.data as Repository);
     }
     return [];
   }
@@ -315,6 +330,88 @@ export class WorkspacesTreeProvider implements vscode.TreeDataProvider<Workspace
       );
     }
     return rows;
+  }
+
+  /** The read-only Branches group of a Project; empty until expanded. */
+  private branchesItem(repo: Repository, state: vscode.TreeItemCollapsibleState): WorkspaceTreeItem {
+    const item = new WorkspaceTreeItem('Branches', state, 'branches', repo, 'branches');
+    item.iconPath = new vscode.ThemeIcon('git-branch', new vscode.ThemeColor('descriptionForeground'));
+    item.tooltip = 'Local branches of this Project. A branch with a worktree opens it.';
+    return item;
+  }
+
+  private branchRows(repo: Repository): WorkspaceTreeItem[] {
+    const { worktrees } = this.getRepoWorktrees(repo);
+    const activeId = this.activeWorktreeId();
+    const rows = this.localBranches(repo).map((branch) =>
+      this.branchItem(
+        {
+          id: `branch-${repo.id}-${branch}`,
+          repoId: repo.id,
+          name: branch,
+          worktree: worktrees.find((worktree) => worktree.branch === branch),
+        },
+        activeId
+      )
+    );
+    // A detached worktree has no branch; its short commit stands in for one.
+    for (const worktree of worktrees) {
+      if (worktree.branch || !worktree.head) {
+        continue;
+      }
+      rows.push(
+        this.branchItem(
+          {
+            id: `detached-${worktree.id}`,
+            repoId: repo.id,
+            name: worktree.head.slice(0, 7),
+            worktree,
+            detached: true,
+          },
+          activeId
+        )
+      );
+    }
+    return rows;
+  }
+
+  private branchItem(listing: BranchListing, activeId: string | undefined): WorkspaceTreeItem {
+    const item = new WorkspaceTreeItem(listing.name, vscode.TreeItemCollapsibleState.None, 'branch', listing, 'branch');
+    const worktree = listing.worktree;
+    if (!worktree) {
+      item.iconPath = new vscode.ThemeIcon('git-branch', new vscode.ThemeColor('disabledForeground'));
+      item.description = 'no worktree';
+      item.tooltip = 'No worktree checks out this branch. Create a worktree to work on it.';
+      return item;
+    }
+
+    const isCurrent = worktree.id === activeId;
+    const [icon, color] = listing.detached
+      ? ['git-commit', 'descriptionForeground']
+      : isCurrent
+        ? ['target', 'charts.yellow']
+        : ['git-branch', worktree.isMain ? 'charts.green' : 'descriptionForeground'];
+    item.iconPath = new vscode.ThemeIcon(icon, new vscode.ThemeColor(color));
+    const description = [listing.detached ? 'detached' : '', worktree.name === listing.name ? '' : worktree.name];
+    item.description = description.filter(Boolean).join(' · ') || undefined;
+    item.tooltip = [
+      worktree.path,
+      listing.detached ? 'Detached HEAD; its short commit is the label.' : '',
+      isCurrent ? 'Focused worktree' : 'Checks out this branch.',
+    ]
+      .filter(Boolean)
+      .join('\n\n');
+    return item;
+  }
+
+  private localBranches(repo: Repository): string[] {
+    const cached = this.branchCache.get(repo.id);
+    if (cached && Date.now() - cached.fetchedAt < SYNC_CACHE_MS) {
+      return cached.branches;
+    }
+    const branches = this.gitService.getLocalBranches(repo.rootPath);
+    this.branchCache.set(repo.id, { branches, fetchedAt: Date.now() });
+    return branches;
   }
 
   private getSyncState(worktreePath: string): { ahead: number; behind: number } | null {

@@ -100,6 +100,16 @@ export class GitService {
     return this.attempt(['init', '-b', branch], dirPath, 'Initialize repository');
   }
 
+  /** Local branches only; the Branches group does not list remote-tracking refs. */
+  getLocalBranches(repoPath: string): string[] {
+    return this.lines(['for-each-ref', '--format=%(refname:short)', 'refs/heads'], repoPath);
+  }
+
+  /** Forget worktree metadata whose directory is gone (for example, in the Trash). */
+  pruneWorktrees(repoPath: string): boolean {
+    return this.attempt(['worktree', 'prune'], repoPath, 'Prune worktrees').success;
+  }
+
   listWorktrees(repoPath: string, repoId: string): Worktree[] {
     return this.parseWorktrees(repoPath, repoId) ?? [];
   }
@@ -160,11 +170,13 @@ export class GitService {
         continue;
       }
       const branch = lines.find((l) => l.startsWith('branch '))?.slice('branch refs/heads/'.length);
+      const head = lines.find((l) => l.startsWith('HEAD '))?.slice('HEAD '.length);
       worktrees.push({
         id: worktreeId(repoId, worktreePath),
         repoId,
         name: branch || path.basename(worktreePath),
         branch: branch || undefined,
+        head: head || undefined,
         path: worktreePath,
         // Git reports physical paths, while a folder added through a symlink
         // keeps the spelling the user picked.

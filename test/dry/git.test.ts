@@ -138,6 +138,22 @@ test('the discard summary counts tracked changes and lists exactly what git clea
   });
 });
 
+test('the worktree listing reports local refs and a detached HEAD separately', (t) => {
+  const { scratch, root } = makeRepo(t);
+  git(root, 'branch', 'feature/local');
+  const linked = path.join(scratch, 'linked');
+  git(root, 'worktree', 'add', '-q', '-b', 'checked-out', linked);
+  const detached = path.join(scratch, 'detached');
+  git(root, 'worktree', 'add', '-q', '--detach', detached);
+
+  const current = git(root, 'branch', '--show-current').trim();
+  assert.deepEqual(service.getLocalBranches(root).sort(), ['checked-out', 'feature/local', current].sort());
+  const head = git(detached, 'rev-parse', 'HEAD').trim();
+  const worktree = service.listWorktrees(root, 'repo').find((candidate) => candidate.path === detached)!;
+  assert.equal(worktree.branch, undefined);
+  assert.equal(worktree.head, head);
+});
+
 test('force removal only accepts a registered worktree', (t) => {
   const { scratch, root } = makeRepo(t);
   // The guard is private because it backs the one Node directory deletion in

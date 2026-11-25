@@ -143,8 +143,8 @@ export class ClaudeAgentsService {
     this.now = options.now ?? Date.now;
   }
 
-  async getStates(): Promise<Map<string, ClaudeAgentState>> {
-    if (!this.enabled() || this.unavailable) {
+  async getStates(options: { ignoreEnabled?: boolean } = {}): Promise<Map<string, ClaudeAgentState>> {
+    if ((!options.ignoreEnabled && !this.enabled()) || this.unavailable) {
       return new Map();
     }
 
