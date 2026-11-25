@@ -7,9 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Projects and the managed workspace** — a folder you add is now a **Project**, and the **Projects** view shows its worktrees. Every worktree of an Open Project is a folder of one managed VS Code workspace, per host: `~/.agntree/agntree.code-workspace` on the machine VS Code is connected to. On first run Agntree offers to open it; **Open Managed Workspace**, **Add Project to Workspace**, and **Remove Project from Workspace** manage it later. Agents, terminals, and editors keep running because the folder set is edited in place. Projects that are not in the workspace say **not in workspace** and still run sessions in terminals. See [ADR 0019](adr/0019-managed-multi-root-workspace.md).
+- **Focus** — selecting a worktree, or opening one of its sessions, points the Changes and All Files panels at it and moves its folder to the front of the managed workspace. The Claude Code panel runs in the first folder, so it now works for any worktree of an Open Project instead of only the one VS Code had open. The folder set never changes.
+- **Add Project offers git** — picking a folder that is not a git repository offers to initialize one (`git init`, no commit); declining leaves it out. Projects are managed with git.
+- **Remote-first install** — the extension declares `extensionKind: ["workspace"]`, so a Remote-SSH window runs it, and reads only the host's projects and sessions, never the local machine's.
+
+### Changed
+
+- **Project wording** — **Workspaces** is now **Projects**; **Add Local Folder or Repository…** is **Add Project…**, and **Remove from Agntree…** is **Remove Project from Agntree…**. The commands and the view id stay the same.
+- **Focus replaces folder switching** — the worktree you select is the one the panels and the Claude Code panel use; VS Code's Explorer order follows Focus. **Open in New Window** remains for opening one worktree alone.
+
 ### Removed
 
 - **Find Session** — the feature is removed, along with its view, commands, settings, and the `agntree.sessionSearch.*` configuration. Session history is still available through **Import Existing Sessions…** and the per-worktree session list. See [ADR 0018](adr/0018-remove-find-session.md).
+- **Open in This Window and `agntree.autoSwitchWorkspaceFolder`** — the commands and setting that replaced VS Code's open folder on every selection are gone; Focus reorders the managed workspace instead. See [ADR 0019](adr/0019-managed-multi-root-workspace.md).
 
 ## [4.0.0] - 2026-11-14
 
