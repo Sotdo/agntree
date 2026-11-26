@@ -1,16 +1,18 @@
+import * as os from 'os';
 import * as vscode from 'vscode';
 
 /**
  * VS Code keeps one `globalState` for a window, and a remote window shares the
  * client's store, so a persisted key must name the host it belongs to. A local
- * window keeps the plain key; a remote window suffixes it with its authority.
+ * window keeps the plain key; a remote window suffixes it with its remote name
+ * and host name. The workspace folder URIs inside a remote extension host are
+ * `file:` URIs, so the window's authority is not visible here.
  */
 export function hostKey(key: string): string {
   if (!vscode.env.remoteName) {
     return key;
   }
-  const authority = vscode.workspace.workspaceFolders?.[0]?.uri.authority || vscode.env.remoteName;
-  return `${key}@${authority}`;
+  return `${key}@${vscode.env.remoteName}:${os.hostname()}`;
 }
 
 /**

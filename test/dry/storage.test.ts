@@ -1,5 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import * as os from 'os';
 import { makeStorage, memento, stub } from './support';
 import { STORAGE_KEYS } from '../../src/types';
 
@@ -112,9 +113,7 @@ test('a remote window keeps its own Projects, separate from the local window', (
     stub.workspace.workspaceFolders = [];
   });
   stub.env.remoteName = 'ssh-remote';
-  stub.workspace.workspaceFolders = [
-    { uri: { fsPath: '/remote/app', scheme: 'vscode-remote', authority: 'ssh-remote+dev' } },
-  ];
+  stub.workspace.workspaceFolders = [];
   const remote = makeStorage(globalState);
   remote.addRepository('remote-app', '/remote/app');
   assert.deepEqual(remote.getRepositories().map((repo) => repo.name), ['remote-app']);
@@ -125,5 +124,5 @@ test('a remote window keeps its own Projects, separate from the local window', (
   assert.deepEqual(local.getRepositories(), [], 'the local window does not see remote Projects');
   local.addRepository('local-app', '/local/app');
   assert.deepEqual(local.getRepositories().map((repo) => repo.name), ['local-app']);
-  assert.ok(globalState.keys().includes(`${STORAGE_KEYS.REPOSITORIES}@ssh-remote+dev`));
+  assert.ok(globalState.keys().includes(`${STORAGE_KEYS.REPOSITORIES}@ssh-remote:${os.hostname()}`));
 });
