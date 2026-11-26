@@ -25,6 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **A click opens the official panel first** — clicking a session focuses the terminal or panel already showing it; otherwise it opens the agent's own VS Code panel, and a terminal resume is the fallback. `agntree.defaultSessionSurface` now chooses where a **new** session starts. **Open Session in Terminal** remains the explicit way back. See [ADR 0023](adr/0023-open-policy-and-surface-handoff.md).
 - **Switching surfaces waits for idle** — moving a session between its terminal and its panel is refused while the agent is working on a turn, so the switch never kills a running turn.
 - **Dangerous git actions confirm** — merge, rebase, delete worktree, fork to a new worktree, and PR checkout now confirm with the branch, worktree, uncommitted-file count, and open agent sessions, and each writes to the operation log. See [ADR 0024](adr/0024-preflights-and-trash-delete.md).
+- **A folder mismatch offers the managed workspace** — when the Claude Code UI refuses because its panel runs in another folder and the session's worktree is in the managed workspace, the warning now offers **Open Managed Workspace**; Focus then moves that worktree's folder first, so the panel can open there. A worktree outside the workspace still offers **Open in New Window**.
 
 ### Removed
 

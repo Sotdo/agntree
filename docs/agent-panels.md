@@ -52,9 +52,9 @@ The two extensions decide where a conversation runs, which sets what Agntree can
 | --- | --- | --- |
 | Open an existing session | The session's worktree must be the **first folder** open in the VS Code window. Agntree focuses the worktree first, which moves its folder to the front of the [managed workspace](getting-started.md#open-the-managed-workspace) | Any worktree; the thread keeps its own directory |
 | Start a new session | Same: the worktree's folder moves first | The worktree must be the **only folder** in the window |
-| Otherwise | Agntree offers **Open in New Window** for that worktree | Agntree offers **Open in New Window** for that worktree |
+| Otherwise | Agntree offers **Open Managed Workspace** when the worktree is in it, otherwise **Open in New Window** | Agntree offers **Open in New Window** for that worktree |
 
-The Claude Code panel reads the first folder when it creates its host and offers no way to pass a different directory. Focusing the worktree before the panel opens satisfies that without changing the folder set, so no running agent is interrupted. A window that is not the managed workspace, or a worktree that is not in it, still cannot host the panel: Agntree explains why and offers **Open in New Window**. It never starts a conversation in the wrong directory. Starting in the terminal and moving to the panel after the first prompt always works for Codex, and now works for Claude Code in the managed workspace.
+The Claude Code panel reads the first folder when it creates its host and offers no way to pass a different directory. Focusing the worktree before the panel opens satisfies that without changing the folder set, so no running agent is interrupted. A window that is not the managed workspace, or a worktree that is not in it, still cannot host the panel: Agntree explains why, offers **Open Managed Workspace** when it holds the worktree, and otherwise offers **Open in New Window**. It never starts a conversation in the wrong directory. Starting in the terminal and moving to the panel after the first prompt always works for Codex, and now works for Claude Code in the managed workspace.
 
 ## Which panels Agntree follows
 

@@ -12,6 +12,7 @@ import { TerminalManager } from '../../src/services/TerminalManager';
 import { HarnessRegistry } from '../../src/harnesses/HarnessRegistry';
 import { WorktreeCatalog } from '../../src/services/WorktreeCatalog';
 import { SessionImportService } from '../../src/services/SessionImportService';
+import { ManagedWorkspaceService } from '../../src/services/ManagedWorkspaceService';
 import { WorkspaceTreeItem } from '../../src/providers/WorkspacesTreeProvider';
 import { registerChatCommands } from '../../src/commands/chat';
 import { registerSessionImportCommands } from '../../src/commands/sessionImport';
@@ -26,6 +27,7 @@ import {
   sessionRecord,
   shown,
   stub,
+  tempDir,
   waitFor,
   worktreeRecord,
 } from './support';
@@ -110,6 +112,10 @@ function setup(t: { after(fn: () => void): void }, options: { notInstalled?: Har
   const registrations: string[] = [];
   const watchers = { registerPendingChat: (_h: HarnessId, chatId: string) => registrations.push(chatId) };
   const terminals = new TerminalManager(storage, registry, watchers as never);
+  const managedWorkspace = new ManagedWorkspaceService(
+    { globalState: { get: () => undefined, update: async () => undefined } } as never,
+    tempDir(t)
+  );
   const catalog = new WorktreeCatalog(storage, git as never);
   const importer = new SessionImportService(storage, catalog, registry, {
     scanIntervalMs: 10,
@@ -141,6 +147,7 @@ function setup(t: { after(fn: () => void): void }, options: { notInstalled?: Har
       prepare.calls.push(worktree.id);
       prepare.hook?.(worktree);
     },
+    managedWorkspace,
     turnState: () => live.turnState,
     runningSessions: () => 0,
     showWorktree: (worktree) => shown.push(worktree.id),
@@ -155,7 +162,7 @@ function setup(t: { after(fn: () => void): void }, options: { notInstalled?: Har
 
   return {
     storage, main, feature, folder, folderRepo, worktrees, missing, sessions, adapters, terminals,
-    claudeUi, codexUi, shown, activated, registrations, needingYou, selectedRows, active, prepare, live,
+    managedWorkspace, claudeUi, codexUi, shown, activated, registrations, needingYou, selectedRows, active, prepare, live,
     /** A chat in a worktree (main by default), linked when `sessionId` is given. */
     chat(harness: HarnessId, name: string, sessionId: string | null = null, worktree = main): ChatSession {
       return storage.createChat(worktree.id, harness, name, { harnessSessionId: sessionId });
@@ -316,6 +323,24 @@ test('Open in UI explains a refusal before touching anything', async (t) => {
   f.claudeUi.nativeUi.isInstalled = () => false;
   await runCommand('agntree.openClaudeUi', f.row(gone));
   assert.ok(shown('The Claude Code UI extension is not installed'));
+});
+
+test('a folder mismatch offers the managed workspace when it holds the worktree', async (t) => {
+  const f = setup(t);
+  await f.managedWorkspace.add([f.feature.path]);
+  const opened: string[] = [];
+  vscode.commands.registerCommand('vscode.openFolder', (uri: { fsPath: string }) => {
+    opened.push(uri.fsPath);
+  });
+  const chat = f.chat('claude', 'Feature', 'claude-feature', f.feature);
+  f.claudeUi.nativeUi.checkAvailability = () => ({ kind: 'workspace-mismatch', uiCwd: f.main.path });
+  stub.__warningResponses.push('Open Managed Workspace');
+
+  await runCommand('agntree.openClaudeUi', f.row(chat));
+
+  assert.ok(shown('Open the managed workspace'));
+  assert.deepEqual(opened, [f.managedWorkspace.workspaceFilePath]);
+  assert.equal(f.claudeUi.opened.length, 0);
 });
 
 test('a click reveals a session already open in its UI, from the tree or the starred list; a live terminal still wins', async (t) => {

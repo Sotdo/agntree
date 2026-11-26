@@ -52,7 +52,7 @@ A row is linked to the agent's session after your first prompt. If it still says
 The message says why. The usual reasons:
 
 - **The extension is not installed.** Choose **Find Extension** in the message.
-- **The worktree is not the first folder in the window** (Claude Code), or **not the only folder** (a new Codex session). Choose **Open in New Window**.
+- **The worktree is not the first folder in the window** (Claude Code), or **not the only folder** (a new Codex session). If the worktree is in the managed workspace, choose **Open Managed Workspace** and Agntree moves its folder first; otherwise choose **Open in New Window**.
 - **The session has no prompt yet.** Send the first prompt in the terminal, then move it to the panel.
 
 See [Agent panels](agent-panels.md#which-folder-the-panel-runs-in).

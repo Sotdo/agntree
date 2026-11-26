@@ -347,6 +347,7 @@ export async function activate(context: vscode.ExtensionContext) {
     activeWorktree: () => shownWorktree,
     activateChat,
     prepareWorktree: (worktree) => focusWorktree(worktree, { reorder: true }),
+    managedWorkspace,
     showWorktree,
     turnState: (chatId) => attentionService.getTurnState(chatId),
     runningSessions: runningSessionCount,

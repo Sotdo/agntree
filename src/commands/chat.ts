@@ -4,6 +4,7 @@ import { GitService } from '../services/GitService';
 import { TerminalManager } from '../services/TerminalManager';
 import { HarnessWatcherRegistry } from '../services/HarnessWatcherRegistry';
 import { SessionImportService } from '../services/SessionImportService';
+import { ManagedWorkspaceService } from '../services/ManagedWorkspaceService';
 import { logOperation } from '../services/OperationLog';
 import { WorkspaceTreeItem, WorkspacesTreeProvider } from '../providers/WorkspacesTreeProvider';
 import { ChatSession, HarnessId, Worktree, generateId } from '../types';
@@ -57,6 +58,8 @@ export interface ChatCommandDeps {
   showWorktree: (worktree: Worktree) => void;
   /** Point the panels at a worktree and move it first in the managed workspace. */
   prepareWorktree: (worktree: Worktree) => Promise<void>;
+  /** The managed workspace, so a UI refusal can offer to switch to it. */
+  managedWorkspace: ManagedWorkspaceService;
   /** The chat's live turn state, so a surface handoff never kills a running turn. */
   turnState: (chatId: string) => TurnState | undefined;
   /** Sessions with a live terminal or native-UI tab in a worktree, for preflights. */
@@ -90,6 +93,7 @@ export function registerChatCommands(
     activeWorktree,
     activateChat,
     prepareWorktree,
+    managedWorkspace,
     showWorktree,
     turnState,
     runningSessions,
@@ -304,7 +308,7 @@ export function registerChatCommands(
     sessionImporter.cancelExpectation(chat.id);
     removeChats([chat.id], { rememberSession: false });
     refreshTree();
-    await reportNativeUiProblem(nativeUi, worktree.path, result);
+    await reportNativeUiProblem(nativeUi, worktree.path, result, managedWorkspace);
   };
 
   const createSession = async (
@@ -336,7 +340,7 @@ export function registerChatCommands(
         return;
       }
       if (surface === 'ui') {
-        await explainNativeUiUnavailable(nativeUi, worktree.path, availability);
+        await explainNativeUiUnavailable(nativeUi, worktree.path, availability, managedWorkspace);
         return;
       }
       // The default surface is a preference: when the UI cannot start this
@@ -372,7 +376,7 @@ export function registerChatCommands(
     const adapter = harnessRegistry.get(chat.harness);
     const surfaces = nativeUi.surfaces;
     if (!nativeUi.isInstalled()) {
-      await explainNativeUiUnavailable(nativeUi, worktree.path, { kind: 'not-installed' });
+      await explainNativeUiUnavailable(nativeUi, worktree.path, { kind: 'not-installed' }, managedWorkspace);
       return;
     }
     await prepareWorktree(worktree);
@@ -418,7 +422,7 @@ export function registerChatCommands(
     // cost the user a running process.
     const availability = nativeUi.checkAvailability(worktree.path);
     if (availability.kind !== 'available') {
-      await explainNativeUiUnavailable(nativeUi, worktree.path, availability);
+      await explainNativeUiUnavailable(nativeUi, worktree.path, availability, managedWorkspace);
       return;
     }
 
@@ -454,7 +458,7 @@ export function registerChatCommands(
     const result = await tryOpen(() => nativeUi.openSession(sessionId, worktree.path));
     if (result.kind !== 'opened') {
       surfaces?.cancelExpect(sessionId);
-      await reportNativeUiProblem(nativeUi, worktree.path, result);
+      await reportNativeUiProblem(nativeUi, worktree.path, result, managedWorkspace);
       return;
     }
     surfaces?.settle(sessionId, { allowActiveFallback: true });
@@ -1097,24 +1101,26 @@ async function tryOpen(open: () => Promise<NativeUiOpenResult>): Promise<NativeU
 async function reportNativeUiProblem(
   nativeUi: Pick<NativeUiCapability, 'displayName' | 'extensionId'>,
   worktreePath: string,
-  result: Exclude<NativeUiOpenResult, { kind: 'opened' }>
+  result: Exclude<NativeUiOpenResult, { kind: 'opened' }>,
+  managedWorkspace: ManagedWorkspaceService
 ): Promise<void> {
   if (result.kind === 'failed') {
     vscode.window.showErrorMessage(`Could not open the ${nativeUi.displayName}: ${result.message}`);
     return;
   }
-  await explainNativeUiUnavailable(nativeUi, worktreePath, result);
+  await explainNativeUiUnavailable(nativeUi, worktreePath, result, managedWorkspace);
 }
 
 /**
  * Explain why a native-UI handoff cannot proceed. A worktree mismatch offers
- * to open that worktree in a new window, where it becomes the first folder and
- * the handoff is safe.
+ * the managed workspace when it holds the worktree (Focus then makes it the
+ * first folder), or a new window with only that worktree.
  */
 async function explainNativeUiUnavailable(
   nativeUi: Pick<NativeUiCapability, 'displayName' | 'extensionId'>,
   worktreePath: string,
-  result: NativeUiUnavailable
+  result: NativeUiUnavailable,
+  managedWorkspace: ManagedWorkspaceService
 ): Promise<void> {
   const { displayName, extensionId } = nativeUi;
   switch (result.kind) {
@@ -1137,11 +1143,19 @@ async function explainNativeUiUnavailable(
       return;
     case 'workspace-mismatch':
     case 'workspace-multi-root': {
+      const inManagedWorkspace = managedWorkspace.has(worktreePath) && !managedWorkspace.isOpen();
       const message =
         result.kind === 'workspace-mismatch'
-          ? `${displayName} runs in the first folder open in VS Code:\n${result.uiCwd}\n\nThis session belongs to:\n${worktreePath}\n\nOpen that worktree in a new window, where ${displayName} can use it.`
-          : `${displayName} starts new sessions in the whole VS Code workspace, not one folder.\n\nOpen this worktree as the only folder in a window:\n${worktreePath}`;
-      const choice = await vscode.window.showWarningMessage(message, 'Open in New Window');
+          ? `${displayName} runs in the first folder open in VS Code:\n${result.uiCwd}\n\nThis session belongs to:\n${worktreePath}\n\n${inManagedWorkspace ? 'Open the managed workspace and Agntree moves that folder first, or open the worktree in a new window.' : `Open that worktree in a new window, where ${displayName} can use it.`}`
+          : `${displayName} starts new sessions in the whole VS Code workspace, not one folder.\n\n${inManagedWorkspace ? 'Open the managed workspace and Agntree moves the worktree first, or open' : 'Open'} this worktree as the only folder in a window:\n${worktreePath}`;
+      const actions = inManagedWorkspace
+        ? ['Open Managed Workspace', 'Open in New Window']
+        : ['Open in New Window'];
+      const choice = await vscode.window.showWarningMessage(message, ...actions);
+      if (choice === 'Open Managed Workspace') {
+        await managedWorkspace.open();
+        return;
+      }
       if (choice === 'Open in New Window') {
         try {
           await vscode.commands.executeCommand('vscode.openFolder', hostUri(worktreePath), {
