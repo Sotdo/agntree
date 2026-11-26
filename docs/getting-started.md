@@ -46,7 +46,7 @@ Add as many Projects as you like. They do not have to be open in VS Code.
 
 ## Open the managed workspace
 
-Agntree keeps every worktree of your Open Projects in one VS Code workspace, per host: `~/.agntree/agntree.code-workspace` on the machine VS Code is connected to (a Remote-SSH window keeps its own). This is what lets agents run side by side in different worktrees without switching folders or reloading the window.
+Agntree keeps every worktree of your Open Projects in one VS Code workspace, per host: `~/.agntree/agntree.code-workspace` on the machine VS Code is connected to (a Remote-SSH window keeps its own). Projects, sessions, and the focused worktree are kept per host too, so a Remote-SSH window starts with its own list instead of the one from your local machine. This is what lets agents run side by side in different worktrees without switching folders or reloading the window.
 
 - On first run Agntree offers to open it. **Open Managed Workspace** in the view's `…` menu opens it later.
 - **Add Project to Workspace** on a Project's right-click menu opens all of its worktrees as folders; **Remove Project from Workspace** takes them out. Files, agents, and sessions are not affected either way.
