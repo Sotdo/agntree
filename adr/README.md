@@ -24,12 +24,13 @@ to learn how a subsystem works today, and the ADR to learn why it is shaped that
 | [0016](0016-find-session-sources-across-harnesses.md) | Find Session searches every harness, and runs only where a read-only mode exists | Superseded by 0018 |
 | [0017](0017-opencode-find-session-source-only.md) | opencode stays a Find Session source, not a runner | Superseded by 0018 |
 | [0018](0018-remove-find-session.md) | Remove Find Session | Proposed (Slice 1); supersedes 0014, 0016, 0017 |
-| [0019](0019-managed-multi-root-workspace.md) | Worktrees of Open Projects share one managed multi-root workspace | Proposed (Slice 1); supersedes in part 0009, 0010 |
+| [0019](0019-managed-multi-root-workspace.md) | Worktrees of Open Projects share one managed multi-root workspace | Proposed (Slice 1); superseded in part by 0025; supersedes in part 0009, 0010 |
 | [0020](0020-archive-reversible-visibility.md) | Archive is a reversible visibility state | Proposed (Slice 3); supersedes 0013 and in part 0012 |
 | [0021](0021-antigravity-provider.md) | Antigravity is a first-class agent provider | Proposed (Slice 2) |
 | [0022](0022-status-and-attention-without-hooks.md) | Status and attention use native signals, not hooks | Proposed (Slices 1–3) |
 | [0023](0023-open-policy-and-surface-handoff.md) | Opening a session prefers the official UI; surface changes wait for idle | Proposed (Slice 1); supersedes in part 0010, 0011, 0012 |
 | [0024](0024-preflights-and-trash-delete.md) | Dangerous git actions preflight, and a worktree delete goes to the Trash | Proposed (Slice 1) |
+| [0025](0025-open-managed-workspace-is-written-by-vs-code.md) | VS Code writes the open managed workspace file | Accepted; supersedes 0019 in part |
 
 ## Writing one
 

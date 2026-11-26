@@ -373,8 +373,11 @@ shortens the code but makes failure behavior less clear is a regression; revert 
   edits the `.code-workspace` configuration and the host keeps running; only replacing the
   sole folder of a single-folder window restarts it. Focus reorders folders through
   `ManagedWorkspaceService`, persisting the focused worktree id to `globalState` first;
-  `activate()` restores it, falling back to the first workspace folder. A malformed
-  `~/.agntree/agntree.code-workspace` is refused, never overwritten. VS Code rewrites the
+  `activate()` restores it, falling back to the first workspace folder. While the managed
+  workspace is open, `updateWorkspaceFolders()` also writes the file; never write it directly
+  as well, because VS Code reloads the window on an external change and the Claude panels lose
+  their sessions ([ADR 0025](adr/0025-open-managed-workspace-is-written-by-vs-code.md)). A
+  malformed `~/.agntree/agntree.code-workspace` is refused, never overwritten. VS Code rewrites the
   file's folder paths relative to it (`../agntree`) when it saves, so `readFolders()`
   resolves each entry against the file's own directory.
 - **The Claude Code UI runs in the first workspace folder.** It has no cwd argument, so

@@ -86,19 +86,30 @@ export class ManagedWorkspaceService {
     });
   }
 
+  /**
+   * Add folders. While the managed workspace is open, VS Code's folder update
+   * also writes the workspace file; writing it here would make VS Code see an
+   * external change and reload the window.
+   */
   async add(folderPaths: readonly string[]): Promise<void> {
     const additions = folderPaths.filter((folderPath) => !this.has(folderPath));
     if (additions.length === 0) {
       return;
     }
     this.assertWritable();
+    const previous = this.folders;
     this.folders = [...this.folders, ...additions.map(canonicalPath)];
-    await this.write();
     if (this.isOpen()) {
-      await this.addToWorkspace(additions);
+      if (await this.addToWorkspace(additions)) {
+        return;
+      }
+      this.folders = previous;
+      throw new Error('VS Code did not accept the workspace folder change.');
     }
+    await this.write();
   }
 
+  /** Remove folders, with the same write rule as `add()`. */
   async remove(folderPaths: readonly string[]): Promise<void> {
     const targets = new Set(folderPaths.map(canonicalPath));
     const remaining = this.folders.filter((folder) => !targets.has(canonicalPath(folder)));
@@ -106,17 +117,22 @@ export class ManagedWorkspaceService {
       return;
     }
     this.assertWritable();
+    const previous = this.folders;
     this.folders = remaining;
-    await this.write();
     if (this.isOpen()) {
-      await this.removeFromWorkspace(folderPaths);
+      if (await this.removeFromWorkspace(folderPaths)) {
+        return;
+      }
+      this.folders = previous;
+      throw new Error('VS Code did not accept the workspace folder change.');
     }
+    await this.write();
   }
 
   /**
    * Put one worktree first in the managed workspace. The set does not change.
-   * A failed window update restores the previous file order, so the file and
-   * the window never disagree.
+   * VS Code's folder update writes the file; a refusal restores the in-memory
+   * order and leaves the file alone.
    */
   async reorderToFirst(fsPath: string): Promise<void> {
     if (!this.isOpen()) {
@@ -130,10 +146,8 @@ export class ManagedWorkspaceService {
     const previous = this.folders;
     const [first] = this.folders.slice(index, index + 1);
     this.folders = [first, ...this.folders.filter((_, position) => position !== index)];
-    await this.write();
     if (!(await this.applyOrder())) {
       this.folders = previous;
-      await this.write();
     }
   }
 
@@ -181,25 +195,21 @@ export class ManagedWorkspaceService {
     return started;
   }
 
-  private async addToWorkspace(folderPaths: readonly string[]): Promise<void> {
+  private async addToWorkspace(folderPaths: readonly string[]): Promise<boolean> {
     const folders = vscode.workspace.workspaceFolders ?? [];
     const existing = new Set(folders.map((folder) => canonicalPath(folder.uri.fsPath)));
     const additions = folderPaths
       .map(canonicalPath)
       .filter((folderPath) => !existing.has(folderPath))
       .map((folderPath) => ({ uri: hostUri(folderPath), name: path.basename(folderPath) }));
-    if (additions.length > 0) {
-      await this.updateWindow([...folders, ...additions]);
-    }
+    return additions.length === 0 || this.updateWindow([...folders, ...additions]);
   }
 
-  private async removeFromWorkspace(folderPaths: readonly string[]): Promise<void> {
+  private async removeFromWorkspace(folderPaths: readonly string[]): Promise<boolean> {
     const targets = new Set(folderPaths.map(canonicalPath));
     const folders = vscode.workspace.workspaceFolders ?? [];
     const kept = folders.filter((folder) => !targets.has(canonicalPath(folder.uri.fsPath)));
-    if (kept.length !== folders.length) {
-      await this.updateWindow(kept);
-    }
+    return kept.length === folders.length || this.updateWindow(kept);
   }
 
   private assertWritable(): void {

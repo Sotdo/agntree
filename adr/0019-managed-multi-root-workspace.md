@@ -1,6 +1,7 @@
 # 0019 — Worktrees of Open Projects share one managed multi-root workspace
 
 - **Status:** Proposed (design accepted 2026-11-25; ships in Slice 1)
+- **Superseded in part by:** [0025](0025-open-managed-workspace-is-written-by-vs-code.md) — the open workspace file is written by VS Code's folder update, not by Agntree.
 - **Date:** 2026-11-25
 - **Supersedes in part:** [0009](0009-restored-terminals-keep-their-chat.md),
   [0010](0010-claude-ui-handoff.md)
