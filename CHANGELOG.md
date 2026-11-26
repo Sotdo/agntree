@@ -35,7 +35,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - **Workspace membership after VS Code saves the file** — VS Code rewrites the folder paths in `agntree.code-workspace` relative to the file (`../agntree`). Agntree now resolves each entry against the file's directory, so Projects no longer say **not in workspace** and Focus reorders the folders again.
-- **Local and remote windows keep separate state** — a remote window shares the client's `globalState`, so it used to list the Projects and sessions added locally. Agntree now stores them per host, keyed by the window's remote authority: a Remote-SSH window starts with its own Projects, and adding one there no longer changes the local list.
+- **Local and remote windows keep separate state** — a remote window shares the client's `globalState`, so it used to list the Projects and sessions added locally. Agntree now stores them per host, keyed by the window's remote name and host name: a Remote-SSH window starts with its own Projects, and adding one there no longer changes the local list.
+- **Switching worktrees no longer reloads the window** — while the managed workspace is open, Add, Remove, and Focus now leave the workspace file to VS Code's folder update. Writing it directly made VS Code treat the file as changed on disk and reload the window, which ended the Claude Code panels' sessions on every switch. A refused folder update is reported instead of silently restoring the file. See [ADR 0025](adr/0025-open-managed-workspace-is-written-by-vs-code.md).
 
 ## [4.0.0] - 2026-11-14
 
