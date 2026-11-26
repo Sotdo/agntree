@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { Repository, ChatSession, HarnessId, STORAGE_KEYS, generateId } from '../types';
 import { harnessSessionKey } from '../harnesses/sessionUtils';
+import { hostKey } from '../utils/hostUri';
 
 /** How long a user removal keeps a session out of auto-import. */
 const REMOVED_SESSION_TTL_MS = 90 * 24 * 60 * 60 * 1000;
@@ -41,11 +42,11 @@ export class StorageService {
   constructor(private context: vscode.ExtensionContext) {}
 
   private get<T>(key: string, fallback: T): T {
-    return this.context.globalState.get<T>(key, fallback);
+    return this.context.globalState.get<T>(hostKey(key), fallback);
   }
 
   private set(key: string, value: unknown): Thenable<void> {
-    return this.context.globalState.update(key, value);
+    return this.context.globalState.update(hostKey(key), value);
   }
 
   // Repositories. The stored array order is the tree order.

@@ -3,7 +3,7 @@ import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { canonicalPath } from '../utils/paths';
-import { hostUri } from '../utils/hostUri';
+import { hostKey, hostUri } from '../utils/hostUri';
 
 const PROMPTED_KEY = 'agntree.managedWorkspacePrompted';
 /** A folder update that has not landed by now is left as started; the command is not held forever. */
@@ -21,6 +21,7 @@ interface ManagedWorkspaceFile {
 export class ManagedWorkspaceService {
   private folders: string[] = [];
   private invalid = false;
+  private readonly promptedKey = hostKey(PROMPTED_KEY);
   private readonly filePath: string;
 
   constructor(
@@ -58,13 +59,13 @@ export class ManagedWorkspaceService {
 
   /** Offer the managed workspace once, then leave the command in the menu. */
   async promptOnce(): Promise<void> {
-    if (this.context.globalState.get<boolean>(PROMPTED_KEY, false)) {
+    if (this.context.globalState.get<boolean>(this.promptedKey, false)) {
       return;
     }
     if (!this.exists() || this.isOpen()) {
       return;
     }
-    await this.context.globalState.update(PROMPTED_KEY, true);
+    await this.context.globalState.update(this.promptedKey, true);
     const choice = await vscode.window.showInformationMessage(
       'Agntree keeps the worktrees of your Open Projects in one managed workspace. Open it now? VS Code reloads this window.',
       'Open Managed Workspace',
