@@ -19,7 +19,7 @@
   "homepage": "https://subhashkhileri.github.io/agntree",
   "qna": "marketplace",
   "engines": {
-    "vscode": "^1.93.0"
+    "vscode": "^1.106.0"
   },
   "categories": [
     "AI",
@@ -78,6 +78,13 @@
           "title": "Agntree",
           "icon": "resources/icons/agntree-activitybar.svg"
         }
+      ],
+      "secondarySidebar": [
+        {
+          "id": "agntreeFiles",
+          "title": "Agntree Files and Changes",
+          "icon": "resources/icons/agntree-activitybar.svg"
+        }
       ]
     },
     "views": {
@@ -86,16 +93,18 @@
           "id": "agntree.workspacesView",
           "name": "Projects",
           "size": 4
+        }
+      ],
+      "agntreeFiles": [
+        {
+          "id": "agntree.filesView",
+          "name": "All Files",
+          "size": 3
         },
         {
           "id": "agntree.changesView",
           "name": "Changes",
           "size": 2
-        },
-        {
-          "id": "agntree.filesView",
-          "name": "All Files",
-          "size": 3
         }
       ]
     },
