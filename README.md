@@ -36,7 +36,7 @@ In Cursor, search for **Agntree** in the Extensions view; if it is not listed, i
 
 Then select the Agntree icon in the Activity Bar, choose **Add Project…**, and select **+** on a worktree to start a session. The [getting started guide](https://subhashkhileri.github.io/agntree/docs/getting-started/) walks through it in two minutes.
 
-**Requirements:** VS Code 1.93 or newer (or Cursor), git, and at least one of the agent CLIs below. The GitHub CLI (`gh`) is optional and enables pull request checkout.
+**Requirements:** VS Code 1.106 or newer (or Cursor), git, and at least one of the agent CLIs below. The GitHub CLI (`gh`) is optional and enables pull request checkout.
 
 ## Features
 
@@ -149,7 +149,7 @@ Every shortcut can be changed. See [all keyboard shortcuts](https://subhashkhile
 Yes. Agntree is MIT licensed and free. You pay only what your agents already cost you.
 
 **Does Agntree work in Cursor?**
-Yes. It works in VS Code 1.93 or newer and in editors built on it, such as Cursor. If your editor's extension search does not list Agntree, install the `.vsix` from the [latest release](https://github.com/subhashkhileri/agntree/releases/latest).
+Yes. It works in VS Code 1.106 or newer and in editors built on it, such as Cursor. If your editor's extension search does not list Agntree, install the `.vsix` from the [latest release](https://github.com/subhashkhileri/agntree/releases/latest).
 
 **Does Agntree send my code or sessions anywhere?**
 No. Agntree makes no network requests of its own and collects no telemetry. The agents themselves talk to their model providers as they always do. See [privacy](https://subhashkhileri.github.io/agntree/docs/privacy/).

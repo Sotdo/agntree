@@ -1,6 +1,6 @@
 # Changes and files
 
-The **Changes** and **All Files** panels show what is in the worktree you are working on. Select a worktree or a session in the Projects view and both panels follow it, so you can see what an agent changed in any branch without opening that branch in VS Code.
+The **Changes** and **All Files** panels show what is in the worktree you are working on. They open in the **Secondary Side Bar**, in their own container next to the [Projects view](getting-started.md), so projects, files, and changes are visible at the same time. Select a worktree or a session in Projects and both panels follow it, so you can see what an agent changed in any branch without opening that branch in VS Code.
 
 Both panels name the worktree in their title, for example `Changes (feature/search ~ storefront)`.
 

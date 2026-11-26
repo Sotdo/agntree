@@ -4,7 +4,7 @@ Install Agntree from the VS Code Marketplace, add a Project, and click **+** to 
 
 ## Requirements
 
-- **VS Code 1.93 or newer**, or an editor built on it such as Cursor.
+- **VS Code 1.106 or newer**, or an editor built on it such as Cursor.
 - **Git**, for Projects, worktrees, the Changes panel, and pull requests. Adding a folder that is not a repository offers to initialize one.
 - **At least one supported agent CLI**, installed and working in a terminal:
 
@@ -41,6 +41,8 @@ Agntree needs no account and no configuration.
 The Project appears as a row. A git repository expands to its worktrees, starting with the one you already have (usually `main`).
 
 Add as many Projects as you like. They do not have to be open in VS Code.
+
+**All Files** and **Changes** open in the Secondary Side Bar, in their own container next to Projects, so projects, files, and changes are visible at the same time. Run **View: Toggle Secondary Side Bar** if that column is hidden; VS Code remembers the layout. See [Changes and files](changes-and-files.md).
 
 ## Open the managed workspace
 
