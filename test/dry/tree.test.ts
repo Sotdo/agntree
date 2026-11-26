@@ -1,11 +1,13 @@
 import { beforeEach, test } from 'node:test';
 import assert from 'node:assert/strict';
+import * as fs from 'fs';
+import * as path from 'path';
 import * as vscode from 'vscode';
 import { WorkspaceTreeItem, WorkspacesTreeProvider } from '../../src/providers/WorkspacesTreeProvider';
 import { HarnessRegistry } from '../../src/harnesses/HarnessRegistry';
 import { HarnessAdapter, SessionMetadata } from '../../src/harnesses/types';
 import { ChatSession, BranchListing, Repository, RepositoryWorktrees, Worktree } from '../../src/types';
-import { fakeAdapter, fakeNativeUi, makeStorage, stub, waitFor, worktreeRecord } from './support';
+import { fakeAdapter, fakeNativeUi, makeStorage, stub, tempDir, waitFor, worktreeRecord } from './support';
 
 beforeEach(() => stub.__reset());
 
@@ -187,6 +189,27 @@ test('worktree lookups list each repository at most once', (t) => {
   assert.equal(tree.getWorktreeById('wt-b')?.path, '/work/b');
   assert.equal(tree.findWorktreeByPath('/work/a')?.id, 'wt-a');
   assert.deepEqual(listed, ['a', 'b']);
+});
+
+test('worktree lookup resolves symlinks to match canonical worktree paths', (t) => {
+  if (process.platform === 'win32') return;
+  const dir = tempDir(t);
+  const real = fs.realpathSync(path.join(dir));
+  const physical = path.join(real, 'real-repo');
+  const link = path.join(real, 'link-repo');
+  fs.mkdirSync(physical);
+  fs.symlinkSync(physical, link);
+
+  const storage = makeStorage();
+  const repo = storage.addRepository('repo', physical);
+  const tree = provider(
+    t,
+    storage,
+    () => ({ isGit: true, worktrees: [worktreeRecord({ id: 'wt-real', repoId: repo.id, path: physical })] }),
+    [fakeAdapter('claude')]
+  );
+
+  assert.equal(tree.findWorktreeByPath(link)?.id, 'wt-real');
 });
 
 test('a plain folder shows its sessions directly and follows git init and removal through its watcher', async (t) => {

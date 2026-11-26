@@ -38,6 +38,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Local and remote windows keep separate state** — a remote window shares the client's `globalState`, so it used to list the Projects and sessions added locally. Agntree now stores them per host, keyed by the window's remote name and host name: a Remote-SSH window starts with its own Projects, and adding one there no longer changes the local list.
 - **Switching worktrees no longer reloads the window** — while the managed workspace is open, Add, Remove, and Focus now leave the workspace file to VS Code's folder update. Writing it directly made VS Code treat the file as changed on disk and reload the window, which ended the Claude Code panels' sessions on every switch. A refused folder update is reported instead of silently restoring the file. See [ADR 0025](adr/0025-open-managed-workspace-is-written-by-vs-code.md).
 - **Focus keeps working after a switch** — while the managed workspace is open, a folder change syncs Agntree's folder list from the window instead of rereading a file VS Code has not saved yet, so switching back to a Project moves its folder first again.
+- **Worktrees from PR checkout and fork join the workspace** — **Check Out Pull Request…** and **Fork Session to New Worktree…** now add the new worktree to the managed workspace when its Project is Open, matching **Create Worktree…**.
+- **Removing a session keeps the panels open** — removing or aging out the selected session no longer clears the **Changes** and **All Files** panels while its worktree is still focused.
 
 ## [4.0.0] - 2026-11-14
 

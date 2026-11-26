@@ -76,6 +76,7 @@ interface StubControls {
       deleteCount: number | null | undefined,
       ...folders: { uri: { fsPath: string; scheme?: string; authority?: string }; name?: string }[]
     ): boolean;
+    onDidChangeWorkspaceFolders(listener: () => void): { dispose(): void };
   };
   env: { remoteName: string | undefined };
   window: {

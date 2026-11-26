@@ -233,7 +233,12 @@ export abstract class ExactIdSessionWatcher implements HarnessSessionWatcher {
         // The window is checked again after the await: it may have expired
         // while the record was being read, and an expired window never links.
         const window = this.pending.get(chat.id);
-        if (!window || this.windowExpired(chat, window.since)) {
+        if (!window) {
+          // Linked or removed while `isResumable` was in flight.
+          remaining--;
+          continue;
+        }
+        if (this.windowExpired(chat, window.since)) {
           this.pending.delete(chat.id);
           this.pendingIds.delete(sessionId);
           this.expiredChatIds.add(chat.id);

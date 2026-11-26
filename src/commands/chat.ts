@@ -23,6 +23,7 @@ import { canonicalPath } from '../utils/paths';
 import { hostUri } from '../utils/hostUri';
 import { quoteShellArgument } from '../harnesses/commandUtils';
 import {
+  addWorktreeToOpenProject,
   commandRegistrar,
   defaultWorktreePath,
   noHarnessInstalledMessage,
@@ -348,7 +349,12 @@ export function registerChatCommands(
     }
 
     if (!(await adapter.isInstalled())) {
-      vscode.window.showErrorMessage(noHarnessInstalledMessage(harnessRegistry));
+      const installed = await harnessRegistry.getInstalled();
+      vscode.window.showErrorMessage(
+        installed.length > 0
+          ? `${adapter.displayName} was not found on your PATH. Check Agntree Settings → Agent Commands.`
+          : noHarnessInstalledMessage(harnessRegistry)
+      );
       return;
     }
 
@@ -945,6 +951,7 @@ export function registerChatCommands(
       vscode.window.showErrorMessage('Worktree created but could not find it in the list.');
       return;
     }
+    await addWorktreeToOpenProject(gitService, managedWorkspace, repo, newWorktree.path, branch);
 
     // The adapter decides how the fork reaches the destination cwd.
     let fork: ForkResult;
@@ -1143,12 +1150,17 @@ async function explainNativeUiUnavailable(
       return;
     case 'workspace-mismatch':
     case 'workspace-multi-root': {
-      const inManagedWorkspace = managedWorkspace.has(worktreePath) && !managedWorkspace.isOpen();
+      // Moving a folder first only solves a first-folder mismatch; a multi-root
+      // refusal needs a window with only that worktree.
+      const canOfferManaged =
+        result.kind === 'workspace-mismatch' &&
+        managedWorkspace.has(worktreePath) &&
+        !managedWorkspace.isOpen();
       const message =
         result.kind === 'workspace-mismatch'
-          ? `${displayName} runs in the first folder open in VS Code:\n${result.uiCwd}\n\nThis session belongs to:\n${worktreePath}\n\n${inManagedWorkspace ? 'Open the managed workspace and Agntree moves that folder first, or open the worktree in a new window.' : `Open that worktree in a new window, where ${displayName} can use it.`}`
-          : `${displayName} starts new sessions in the whole VS Code workspace, not one folder.\n\n${inManagedWorkspace ? 'Open the managed workspace and Agntree moves the worktree first, or open' : 'Open'} this worktree as the only folder in a window:\n${worktreePath}`;
-      const actions = inManagedWorkspace
+          ? `${displayName} runs in the first folder open in VS Code:\n${result.uiCwd}\n\nThis session belongs to:\n${worktreePath}\n\n${canOfferManaged ? 'Open the managed workspace and Agntree moves that folder first, or open the worktree in a new window.' : `Open that worktree in a new window, where ${displayName} can use it.`}`
+          : `${displayName} starts new sessions in the whole VS Code workspace, not one folder.\n\nOpen this worktree as the only folder in a window:\n${worktreePath}`;
+      const actions = canOfferManaged
         ? ['Open Managed Workspace', 'Open in New Window']
         : ['Open in New Window'];
       const choice = await vscode.window.showWarningMessage(message, ...actions);

@@ -227,6 +227,10 @@ test('a default agent that is not installed is not launched: New Session offers 
   await runCommand('agntree.newDefaultSession', f.worktreeRow(f.main));
   assert.deepEqual(offered, [f.adapters.opencode.displayName, f.adapters.codex.displayName]);
   assert.equal(f.chatsIn(f.main).length, 0, 'dismissing the question starts nothing');
+
+  // Starting a specific uninstalled agent names that agent when others exist.
+  await runCommand('agntree.newClaudeChat', f.worktreeRow(f.main));
+  assert.ok(shown('Claude Code was not found on your PATH'));
 });
 
 test('Set Default Agent stores the chosen agent, and Ask Every Time clears it', async (t) => {
@@ -325,7 +329,7 @@ test('Open in UI explains a refusal before touching anything', async (t) => {
   assert.ok(shown('The Claude Code UI extension is not installed'));
 });
 
-test('a folder mismatch offers the managed workspace when it holds the worktree', async (t) => {
+test('a folder mismatch offers the managed workspace when it holds the worktree; multi-root never does', async (t) => {
   const f = setup(t);
   await f.managedWorkspace.add([f.feature.path]);
   const opened: string[] = [];
@@ -341,6 +345,13 @@ test('a folder mismatch offers the managed workspace when it holds the worktree'
   assert.ok(shown('Open the managed workspace'));
   assert.deepEqual(opened, [f.managedWorkspace.workspaceFilePath]);
   assert.equal(f.claudeUi.opened.length, 0);
+
+  // Codex new-panel requires a single-folder window, so the multi-root managed
+  // workspace cannot satisfy it and must not be offered.
+  f.codexUi.nativeUi.checkNewSessionAvailability = () => ({ kind: 'workspace-multi-root', uiCwd: f.main.path });
+  await runCommand('agntree.newCodexChatInUi', f.worktreeRow(f.feature));
+  const multiRootMessage = stub.__messages.at(-1)!;
+  assert.deepEqual(multiRootMessage.slice(1), ['Open in New Window']);
 });
 
 test('a click reveals a session already open in its UI, from the tree or the starred list; a live terminal still wins', async (t) => {
@@ -478,13 +489,15 @@ test('Fork Session numbers the fork; a linked fork resumes its new ID, a termina
   assert.ok(shown('Cannot fork a session that has not been started yet'));
 });
 
-test('Fork to New Worktree forks into a new branch worktree; a failed fork or a plain folder creates no chat', async (t) => {
+test('Fork to New Worktree forks into a new branch worktree and adds it when its Project is Open; a failed fork or a plain folder creates no chat', async (t) => {
   const f = setup(t);
+  await f.managedWorkspace.add([f.main.path]);
   const opencode = f.chat('opencode', 'Plan', 'ses_1');
   stub.__inputResponses.push('feature-fork', '/work/demo-feature-fork');
   stub.__warningResponses.push('Fork');
   await runCommand('agntree.forkChatWithChanges', f.row(opencode));
   const created = f.worktrees.find((worktree) => worktree.name === 'feature-fork')!;
+  assert.equal(f.managedWorkspace.has(created.path), true);
   assert.deepEqual(f.chatsIn(created).map((chat) => [chat.name, chat.harnessSessionId]), [['Plan (1)', 'ses_fork']]);
   assert.equal(f.lastTerminal().sent[0], 'opencode --resume ses_fork');
 

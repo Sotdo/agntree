@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { Repository, ChatSession, HarnessId, STORAGE_KEYS, generateId } from '../types';
 import { harnessSessionKey } from '../harnesses/sessionUtils';
 import { hostKey } from '../utils/hostUri';
+import { canonicalPath } from '../utils/paths';
 
 /** How long a user removal keeps a session out of auto-import. */
 const REMOVED_SESSION_TTL_MS = 90 * 24 * 60 * 60 * 1000;
@@ -205,11 +206,11 @@ export class StorageService {
     const chats = this.getChats();
     const removed = chats.filter((chat) => idSet.has(chat.id));
     if (options.rememberSession !== false) {
-      for (const chat of removed) {
-        if (chat.harnessSessionId) {
-          this.rememberRemovedSession(chat.harness, chat.harnessSessionId);
-        }
-      }
+      this.rememberRemovedSessions(
+        removed
+          .filter((chat): chat is ChatSession & { harnessSessionId: string } => Boolean(chat.harnessSessionId))
+          .map((chat) => ({ harness: chat.harness, sessionId: chat.harnessSessionId }))
+      );
     }
     void this.set(STORAGE_KEYS.CHATS, chats.filter((chat) => !idSet.has(chat.id)));
     // Forget every requested id: a pid record can outlive its chat.
@@ -228,10 +229,23 @@ export class StorageService {
   }
 
   rememberRemovedSession(harness: HarnessId, sessionId: string): void {
-    const key = harnessSessionKey(harness, sessionId);
+    this.rememberRemovedSessions([{ harness, sessionId }]);
+  }
+
+  private rememberRemovedSessions(sessions: readonly { harness: HarnessId; sessionId: string }[]): void {
+    if (sessions.length === 0) {
+      return;
+    }
+    const now = Date.now();
+    const additions = sessions.map((session) => ({
+      key: harnessSessionKey(session.harness, session.sessionId),
+      removedAt: now,
+    }));
+    const addedKeys = new Set(additions.map((record) => record.key));
+    const kept = this.getRemovedSessionRecords().filter((record) => !addedKeys.has(record.key));
     void this.set(
       STORAGE_KEYS.REMOVED_SESSIONS,
-      [...this.removedRecordsWithout(key), { key, removedAt: Date.now() }].slice(-REMOVED_SESSION_LIMIT)
+      [...kept, ...additions].slice(-REMOVED_SESSION_LIMIT)
     );
   }
 
@@ -347,7 +361,8 @@ export class StorageService {
    * its folder. Used for terminal identity and for the focused worktree.
    */
   private workspaceKey(): string {
-    return vscode.workspace.workspaceFile?.fsPath ?? vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? '';
+    const raw = vscode.workspace.workspaceFile?.fsPath ?? vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+    return raw ? canonicalPath(raw) : '';
   }
 
   /**
@@ -374,7 +389,8 @@ export class StorageService {
 
     // A window that just converted from a single folder to the managed
     // workspace keeps adopting the agent it launched before the conversion.
-    const folderKey = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+    const rawFolder = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+    const folderKey = rawFolder ? canonicalPath(rawFolder) : undefined;
     const folderPids = folderKey && folderKey !== key ? records[folderKey] : undefined;
     if (folderPids) {
       void this.set(STORAGE_KEYS.TERMINAL_PIDS, { ...records, [key]: folderPids });

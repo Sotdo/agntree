@@ -21,6 +21,8 @@ interface ManagedWorkspaceFile {
 export class ManagedWorkspaceService {
   private folders: string[] = [];
   private invalid = false;
+  /** Serialize window/file edits so concurrent updates never collide in VS Code. */
+  private operations: Promise<void> = Promise.resolve();
   private readonly promptedKey = hostKey(PROMPTED_KEY);
   private readonly filePath: string;
 
@@ -106,42 +108,46 @@ export class ManagedWorkspaceService {
    * also writes the workspace file; writing it here would make VS Code see an
    * external change and reload the window.
    */
-  async add(folderPaths: readonly string[]): Promise<void> {
-    const additions = folderPaths.filter((folderPath) => !this.has(folderPath));
-    if (additions.length === 0) {
-      return;
-    }
-    this.assertWritable();
-    const previous = this.folders;
-    this.folders = [...this.folders, ...additions.map(canonicalPath)];
-    if (this.isOpen()) {
-      if (await this.addToWorkspace(additions)) {
+  add(folderPaths: readonly string[]): Promise<void> {
+    return this.enqueue(async () => {
+      const additions = folderPaths.filter((folderPath) => !this.has(folderPath));
+      if (additions.length === 0) {
         return;
       }
-      this.folders = previous;
-      throw new Error('VS Code did not accept the workspace folder change.');
-    }
-    await this.write();
+      this.assertWritable();
+      const previous = this.folders;
+      this.folders = [...this.folders, ...additions.map(canonicalPath)];
+      if (this.isOpen()) {
+        if (await this.addToWorkspace(additions)) {
+          return;
+        }
+        this.folders = previous;
+        throw new Error('VS Code did not accept the workspace folder change.');
+      }
+      await this.write();
+    });
   }
 
   /** Remove folders, with the same write rule as `add()`. */
-  async remove(folderPaths: readonly string[]): Promise<void> {
-    const targets = new Set(folderPaths.map(canonicalPath));
-    const remaining = this.folders.filter((folder) => !targets.has(canonicalPath(folder)));
-    if (remaining.length === this.folders.length) {
-      return;
-    }
-    this.assertWritable();
-    const previous = this.folders;
-    this.folders = remaining;
-    if (this.isOpen()) {
-      if (await this.removeFromWorkspace(folderPaths)) {
+  remove(folderPaths: readonly string[]): Promise<void> {
+    return this.enqueue(async () => {
+      const targets = new Set(folderPaths.map(canonicalPath));
+      const remaining = this.folders.filter((folder) => !targets.has(canonicalPath(folder)));
+      if (remaining.length === this.folders.length) {
         return;
       }
-      this.folders = previous;
-      throw new Error('VS Code did not accept the workspace folder change.');
-    }
-    await this.write();
+      this.assertWritable();
+      const previous = this.folders;
+      this.folders = remaining;
+      if (this.isOpen()) {
+        if (await this.removeFromWorkspace(folderPaths)) {
+          return;
+        }
+        this.folders = previous;
+        throw new Error('VS Code did not accept the workspace folder change.');
+      }
+      await this.write();
+    });
   }
 
   /**
@@ -149,21 +155,32 @@ export class ManagedWorkspaceService {
    * VS Code's folder update writes the file; a refusal restores the in-memory
    * order and leaves the file alone.
    */
-  async reorderToFirst(fsPath: string): Promise<void> {
-    if (!this.isOpen()) {
-      return;
-    }
-    const target = canonicalPath(fsPath);
-    const index = this.folders.findIndex((folder) => canonicalPath(folder) === target);
-    if (index <= 0) {
-      return;
-    }
-    const previous = this.folders;
-    const [first] = this.folders.slice(index, index + 1);
-    this.folders = [first, ...this.folders.filter((_, position) => position !== index)];
-    if (!(await this.applyOrder())) {
-      this.folders = previous;
-    }
+  reorderToFirst(fsPath: string): Promise<void> {
+    return this.enqueue(async () => {
+      if (!this.isOpen()) {
+        return;
+      }
+      const target = canonicalPath(fsPath);
+      const index = this.folders.findIndex((folder) => canonicalPath(folder) === target);
+      if (index <= 0) {
+        return;
+      }
+      const previous = this.folders;
+      const [first] = this.folders.slice(index, index + 1);
+      this.folders = [first, ...this.folders.filter((_, position) => position !== index)];
+      if (!(await this.applyOrder())) {
+        this.folders = previous;
+      }
+    });
+  }
+
+  private enqueue<T>(task: () => Promise<T>): Promise<T> {
+    const run = this.operations.then(task, task);
+    this.operations = run.then(
+      () => undefined,
+      () => undefined
+    );
+    return run;
   }
 
   private async applyOrder(): Promise<boolean> {

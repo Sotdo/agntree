@@ -158,3 +158,45 @@ test('while the workspace is open, a reload takes the window order, not the file
   await service.load();
   assert.deepEqual([...service.folderPaths], [feature, app], 'the window wins over a file VS Code has not saved yet');
 });
+
+test('concurrent add and Focus reorder serialize window edits instead of colliding', async (t) => {
+  const { service, folder, openWindow, windowFolders } = setup(t);
+  const app = folder('app');
+  const feature = folder('app-feature');
+  await service.add([app]);
+  openWindow(app);
+
+  // Model VS Code applying each folder update asynchronously: a second call
+  // before the previous change event lands is rejected.
+  let inFlight = false;
+  const emitterListeners = new Set<() => void>();
+  const origOnDidChange = stub.workspace.onDidChangeWorkspaceFolders;
+  const original = stub.workspace.updateWorkspaceFolders;
+  stub.workspace.onDidChangeWorkspaceFolders = (listener: () => void) => {
+    emitterListeners.add(listener);
+    return { dispose: () => emitterListeners.delete(listener) };
+  };
+  stub.workspace.updateWorkspaceFolders = (start: number, deleteCount?: number, ...toAdd: { uri: { fsPath: string }; name?: string }[]) => {
+    if (inFlight) {
+      return false;
+    }
+    inFlight = true;
+    const folders = stub.workspace.workspaceFolders;
+    folders.splice(start, deleteCount ?? 0, ...toAdd.map((entry) => ({ uri: entry.uri, name: entry.name ?? '' })));
+    setTimeout(() => {
+      inFlight = false;
+      for (const listener of [...emitterListeners]) {
+        listener();
+      }
+    }, 10);
+    return true;
+  };
+  t.after(() => {
+    stub.workspace.updateWorkspaceFolders = original;
+    stub.workspace.onDidChangeWorkspaceFolders = origOnDidChange;
+  });
+
+  await Promise.all([service.add([feature]), service.reorderToFirst(feature)]);
+  assert.deepEqual(windowFolders(), [feature, app]);
+  assert.deepEqual([...service.folderPaths], [feature, app]);
+});

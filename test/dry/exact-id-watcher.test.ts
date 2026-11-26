@@ -5,12 +5,14 @@
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import * as fs from 'fs';
+import * as path from 'path';
 import {
   ExactIdSessionSource,
   ExactIdSessionWatcher,
 } from '../../src/services/ExactIdSessionWatcher';
 import { StorageService } from '../../src/services/StorageService';
-import { makeStorage, waitFor } from './support';
+import { makeStorage, tempDir, waitFor } from './support';
 
 class TestWatcher extends ExactIdSessionWatcher {
   constructor(storage: StorageService, source: ExactIdSessionSource) {
@@ -90,4 +92,52 @@ test('a chat registered during an in-flight check is linked when the check ends'
     ),
     'second'
   );
+});
+
+test('a session linked from a watch event while a poll is in flight is not marked expired', async (t) => {
+  const dir = tempDir(t);
+  const storage = makeStorage();
+  let releaseFirst: (() => void) | undefined;
+  let signalInFlight: (() => void) | undefined;
+  let firstCall = true;
+  const inFlight = new Promise<void>((resolve) => {
+    signalInFlight = resolve;
+  });
+
+  const source: ExactIdSessionSource = {
+    watchRoots: () => [],
+    watchDirs: () => [dir],
+    sessionIdForFile: (filename) =>
+      filename.endsWith('.jsonl') ? filename.slice(0, -'.jsonl'.length) : null,
+    isResumable: async () => {
+      if (firstCall) {
+        firstCall = false;
+        signalInFlight?.();
+        await new Promise<void>((resolve) => {
+          releaseFirst = resolve;
+        });
+        return true;
+      }
+      return true;
+    },
+    getSummary: async () => null,
+  };
+
+  const watcher = new TestWatcher(storage, source);
+  t.after(() => watcher.dispose());
+
+  const chat = storage.createChat('wt-1', 'pi', 'New Session');
+  storage.updateChat(chat.id, { status: 'active', pendingHarnessSessionId: 'ev-1' });
+  watcher.startWatching();
+  watcher.registerPendingChat(chat.id, dir);
+
+  await inFlight;
+  fs.writeFileSync(path.join(dir, 'ev-1.jsonl'), '');
+  await waitFor(() => storage.getChat(chat.id)!.harnessSessionId, 'watch event to link', 5_000);
+  releaseFirst?.();
+  // Wait a tick so checkPending finishes its finally block cleanly.
+  await new Promise((resolve) => setTimeout(resolve, 20));
+
+  const expired = (watcher as unknown as { expiredChatIds: Set<string> }).expiredChatIds;
+  assert.equal(expired.has(chat.id), false);
 });

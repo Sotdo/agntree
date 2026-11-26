@@ -229,7 +229,6 @@ export async function activate(context: vscode.ExtensionContext) {
     const activeId = storageService.getActiveChatId();
     if (activeId && removed.includes(activeId)) {
       storageService.setActiveChatId(undefined);
-      showWorktree(undefined);
     }
     return removed;
   };
@@ -280,7 +279,6 @@ export async function activate(context: vscode.ExtensionContext) {
       const activeId = storageService.getActiveChatId();
       if (activeId && event.removed.includes(activeId)) {
         storageService.setActiveChatId(undefined);
-        showWorktree(undefined);
       }
     },
   });

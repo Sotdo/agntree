@@ -113,7 +113,7 @@ test('every setting sits in a titled section, explains itself, and names its cho
 });
 
 test('every Workspaces context entry sits in a numbered group, and every command is in the Agntree category', () => {
-  for (const entry of rowMenu.filter((candidate) => !isInline(candidate) && !candidate.when?.includes('changedFile'))) {
+  for (const entry of rowMenu.filter((candidate) => !isInline(candidate))) {
     assert.match(entry.group ?? '', /^\d_\w+@\d$/, id(entry));
   }
   for (const command of pkg.contributes.commands as { command: string; category?: string }[]) {

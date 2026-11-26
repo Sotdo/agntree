@@ -93,16 +93,29 @@ test('terminal PIDs are kept per workspace folder in global state', async () => 
   assert.deepEqual(records['/workspace/b'], { 'chat-b': 222 });
 });
 
-test('a user removal leaves a tombstone; a retention delete and a manual import do not', () => {
-  const storage = makeStorage();
+test('a user removal leaves a tombstone; a retention delete and a manual import do not', async () => {
+  const globalState = memento();
+  const storage = makeStorage(globalState);
   const removed = storage.createChat('wt-1', 'codex', 'Removed', { harnessSessionId: 'thread-1' });
+  const removedTwo = storage.createChat('wt-1', 'codex', 'Removed two', { harnessSessionId: 'thread-3' });
   const expired = storage.createChat('wt-1', 'codex', 'Expired', { harnessSessionId: 'thread-2' });
 
-  storage.deleteChat(removed.id);
+  let tombstoneWrites = 0;
+  const update = globalState.update;
+  globalState.update = async (key, value) => {
+    if (key === STORAGE_KEYS.REMOVED_SESSIONS) {
+      tombstoneWrites++;
+    }
+    return update(key, value);
+  };
+
+  storage.deleteChats([removed.id, removedTwo.id]);
+  assert.equal(tombstoneWrites, 1, 'bulk removal writes tombstones once');
   storage.deleteChats([expired.id], { rememberSession: false });
-  assert.deepEqual([...storage.getRemovedSessionKeys()], ['codex:thread-1']);
+  assert.deepEqual([...storage.getRemovedSessionKeys()].sort(), ['codex:thread-1', 'codex:thread-3']);
 
   storage.forgetRemovedSession('codex', 'thread-1');
+  storage.forgetRemovedSession('codex', 'thread-3');
   assert.equal(storage.getRemovedSessionKeys().size, 0);
 });
 

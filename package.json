@@ -1081,11 +1081,6 @@
           "group": "9_destructive@2"
         },
         {
-          "command": "agntree.openDiff",
-          "when": "view == agntree.workspacesView && viewItem == changedFile",
-          "group": "navigation"
-        },
-        {
           "command": "agntree.rebaseContinue",
           "when": "view == agntree.changesView && viewItem == rebaseSection",
           "group": "inline@1"

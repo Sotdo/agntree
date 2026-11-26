@@ -32,10 +32,11 @@ function setup(t: { after(fn: () => void): void }) {
   );
   // Records whether each worktree's directory still existed when it was forgotten.
   const forgotten: { path: string; existed: boolean }[] = [];
+  const gitHubService = new GitHubService();
   registerWorktreeCommands({ subscriptions: [] } as never, {
     storageService: storage,
     gitService,
-    gitHubService: new GitHubService(),
+    gitHubService,
     managedWorkspace,
     workspacesProvider: {
       getWorktreeForItem: (item) => item?.data as Worktree | undefined,
@@ -50,7 +51,7 @@ function setup(t: { after(fn: () => void): void }) {
   const worktreeAt = (worktreePath: string) =>
     gitService.listWorktrees(repoPath, repo.id).find((w) => w.path === worktreePath)!;
   const branches = () => gitService.getBranches(repoPath).sort();
-  return { scratch, repoPath, repo, managedWorkspace, worktreeAt, branches, forgotten };
+  return { scratch, repoPath, repo, managedWorkspace, gitHubService, worktreeAt, branches, forgotten };
 }
 
 test('Create Worktree puts a new branch under <repo>-worktrees and hides branches already checked out', async (t) => {
@@ -166,4 +167,34 @@ test('Rebase offers the remote branches, recommended main first, but not the bra
   await runCommand('agntree.rebaseWorktree', { itemType: 'worktree', data: worktreeAt(linked) });
 
   assert.deepEqual(offered, ['origin/main', 'origin/zeta']);
+});
+
+test('Check Out Pull Request adds the new worktree to the managed workspace when its Project is Open', async (t) => {
+  const { scratch, repo, repoPath, managedWorkspace, gitHubService, worktreeAt } = setup(t);
+  await managedWorkspace.add([repoPath]);
+  stub.workspace.workspaceFile = { fsPath: managedWorkspace.workspaceFilePath };
+  stub.workspace.workspaceFolders = [{ uri: { fsPath: repoPath } }];
+
+  gitHubService.isGhAvailable = async () => true;
+  gitHubService.listPRs = async () => [
+    { number: 42, title: 'Fix bug', state: 'open', isDraft: false, url: 'https://example.test/pr/42', headRefName: 'fix/bug' },
+  ];
+  gitHubService.fetchPRBranch = async (_root, _num, localBranch) => {
+    git(repoPath, 'branch', localBranch);
+    return true;
+  };
+
+  stub.__setQuickPickHandler((items: { pr?: { number: number } }[]) => items.find((item) => item.pr?.number === 42));
+  t.after(() => stub.__setQuickPickHandler(null));
+  stub.__warningResponses.push('Check Out');
+
+  await runCommand('agntree.checkoutPR', { itemType: 'repository', data: repo });
+
+  const created = path.join(scratch, 'app-worktrees', 'fix-bug');
+  assert.equal(worktreeAt(created)?.branch, 'pr-42');
+  assert.equal(managedWorkspace.has(created), true);
+  assert.deepEqual(
+    stub.workspace.workspaceFolders.map((folder) => folder.uri.fsPath),
+    [repoPath, created]
+  );
 });

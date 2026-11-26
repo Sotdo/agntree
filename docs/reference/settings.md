@@ -1,6 +1,6 @@
 # Settings
 
-Agntree works without any configuration. To change how it behaves, choose **Agntree Settings…** in the Agntree `…` menu, or run **Agntree: Agntree Settings…** from the Command Palette. VS Code's Settings editor opens on Agntree's settings, in the five groups below. Every setting can be changed there; none needs `settings.json`.
+Agntree works without any configuration. To change how it behaves, choose **Agntree Settings…** in the Agntree `…` menu, or run **Agntree: Agntree Settings…** from the Command Palette. VS Code's Settings editor opens on Agntree's settings, in the four groups below. Every setting can be changed there; none needs `settings.json`.
 
 ## Sessions
 

@@ -2,6 +2,8 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import { StorageService } from '../services/StorageService';
 import { GitService } from '../services/GitService';
+import { ManagedWorkspaceService } from '../services/ManagedWorkspaceService';
+import { logOperation } from '../services/OperationLog';
 import { HarnessRegistry } from '../harnesses/HarnessRegistry';
 import { HarnessSession } from '../harnesses/types';
 import { sessionDisplayName } from '../harnesses/sessionUtils';
@@ -89,6 +91,29 @@ export function promptNewBranchName(
 /** Where a new worktree for `branch` goes: `<parent>/<repo>-worktrees/<branch>`. */
 export function defaultWorktreePath(repo: Repository, branch: string): string {
   return path.join(path.dirname(repo.rootPath), `${repo.name}-worktrees`, branch.replace(/\//g, '-'));
+}
+
+/**
+ * Add a newly created worktree to the managed workspace when its Project is
+ * Open. Failure is logged rather than surfaced as a command failure, because
+ * git has already created the worktree.
+ */
+export async function addWorktreeToOpenProject(
+  gitService: Pick<GitService, 'listWorktrees'>,
+  managedWorkspace: ManagedWorkspaceService,
+  repo: Repository,
+  worktreePath: string,
+  label: string
+): Promise<void> {
+  const primary = gitService.listWorktrees(repo.rootPath, repo.id).find((worktree) => worktree.isMain);
+  if (!primary || !managedWorkspace.has(primary.path)) {
+    return;
+  }
+  await managedWorkspace.add([worktreePath]).catch((error: unknown) => {
+    logOperation(
+      `Created worktree "${label}" but could not add it to the managed workspace: ${error instanceof Error ? error.message : String(error)}`
+    );
+  });
 }
 
 /** Shown when an action needs a harness CLI and none is installed. */

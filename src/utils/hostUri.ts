@@ -16,10 +16,10 @@ export function hostKey(key: string): string {
 }
 
 /**
- * The URI a folder or workspace file needs in this window. A Remote-SSH window
- * addresses its folders as `vscode-remote://<authority>/<path>`; a local window
- * uses `file:`. The authority comes from an open folder because VS Code does
- * not expose it directly.
+ * The URI a folder or workspace file needs in this window. When a folder URI
+ * carries a remote authority, preserve `vscode-remote://`; inside a remote
+ * extension host `workspaceFolders` URIs are `file:` (whose authority is empty),
+ * and VS Code's IPC layer translates `vscode.Uri.file()` to the remote host.
  */
 export function hostUri(fsPath: string): vscode.Uri {
   if (!vscode.env.remoteName) {

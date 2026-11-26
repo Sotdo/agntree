@@ -7,7 +7,7 @@ import { WorkspaceTreeItem, WorkspacesTreeProvider } from '../providers/Workspac
 import { Repository, Worktree } from '../types';
 import { logOperation } from '../services/OperationLog';
 import { hostUri } from '../utils/hostUri';
-import { commandRegistrar, defaultWorktreePath, openSessionNote, promptNewBranchName, uncommittedFileCount, withProgress } from './common';
+import { addWorktreeToOpenProject, commandRegistrar, defaultWorktreePath, openSessionNote, promptNewBranchName, uncommittedFileCount, withProgress } from './common';
 
 export interface WorktreeCommandDeps {
   storageService: StorageService;
@@ -142,14 +142,7 @@ export function registerWorktreeCommands(context: vscode.ExtensionContext, deps:
       ? gitService.createWorktreeWithNewBranch(repo.rootPath, branch, worktreePath, base)
       : gitService.createWorktree(repo.rootPath, branch, worktreePath);
     if (created) {
-      const primary = gitService.listWorktrees(repo.rootPath, repo.id).find((worktree) => worktree.isMain);
-      if (primary && managedWorkspace.has(primary.path)) {
-        await managedWorkspace.add([worktreePath]).catch((error: unknown) => {
-          logOperation(
-            `Created worktree "${branch}" but could not add it to the managed workspace: ${error instanceof Error ? error.message : String(error)}`
-          );
-        });
-      }
+      await addWorktreeToOpenProject(gitService, managedWorkspace, repo, worktreePath, branch);
       vscode.window.showInformationMessage(`Created worktree: ${branch}`);
       refreshTree();
     } else {
@@ -242,6 +235,7 @@ export function registerWorktreeCommands(context: vscode.ExtensionContext, deps:
     if (!trashed && !gitService.removeWorktree(repo.rootPath, worktree.path, dirty)) {
       logOperation(`Failed to delete worktree "${worktree.name}" at ${worktree.path}`);
       vscode.window.showErrorMessage('Failed to delete worktree. Check the Output panel for details.');
+      refreshTree();
       return;
     }
     if (!gitService.pruneWorktrees(repo.rootPath)) {
@@ -554,6 +548,7 @@ export function registerWorktreeCommands(context: vscode.ExtensionContext, deps:
     if (worktree) {
       storageService.setPRWorktree(worktree.id, number);
     }
+    await addWorktreeToOpenProject(gitService, managedWorkspace, repo, worktree?.path ?? worktreePath, localBranch);
     logOperation(`Checked out PR #${number} (${headRefName}) into ${worktreePath}`);
     vscode.window.showInformationMessage(`Checked out PR #${number}: ${headRefName}`);
     refreshTree();
