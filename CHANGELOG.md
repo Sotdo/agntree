@@ -19,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Two columns by default** — **All Files** and **Changes** now open in their own container in the **Secondary Side Bar**, next to **Projects**, so the projects, files, and changes panels are visible at the same time. This needs VS Code 1.106 or newer, the first version that lets an extension contribute views to the Secondary Side Bar.
 - **Project wording** — **Workspaces** is now **Projects**; **Add Local Folder or Repository…** is **Add Project…**, and **Remove from Agntree…** is **Remove Project from Agntree…**. The commands and the view id stay the same.
 - **Focus replaces folder switching** — the worktree you select is the one the panels and the Claude Code panel use; VS Code's Explorer order follows Focus. **Open in New Window** remains for opening one worktree alone.
 - **A click opens the official panel first** — clicking a session focuses the terminal or panel already showing it; otherwise it opens the agent's own VS Code panel, and a terminal resume is the fallback. `agntree.defaultSessionSurface` now chooses where a **new** session starts. **Open Session in Terminal** remains the explicit way back. See [ADR 0023](adr/0023-open-policy-and-surface-handoff.md).
