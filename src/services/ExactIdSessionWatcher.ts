@@ -66,6 +66,11 @@ export abstract class ExactIdSessionWatcher implements HarnessSessionWatcher {
     { since: number; worktreePath?: string }
   >();
   private readonly monitoringIntervals = new Map<string, NodeJS.Timeout>();
+  /**
+   * Chats whose window expired. A later scan must not adopt them again with a
+   * fresh window; only a new launch (registerPendingChat) restarts the clock.
+   */
+  private readonly expiredChatIds = new Set<string>();
   /** The pending worktrees the current watchers were armed for. */
   private watchedWorktreePaths: string[] = [];
   private poller: NodeJS.Timeout | undefined;
@@ -97,6 +102,7 @@ export abstract class ExactIdSessionWatcher implements HarnessSessionWatcher {
    * directories, and runs a check immediately.
    */
   registerPendingChat(chatId: string, worktreePath: string): void {
+    this.expiredChatIds.delete(chatId);
     this.pending.set(chatId, { since: Date.now(), worktreePath });
     this.refreshWatchersIfNeeded();
     void this.checkPending();
@@ -118,7 +124,8 @@ export abstract class ExactIdSessionWatcher implements HarnessSessionWatcher {
         chat.harness !== this.harness ||
         chat.harnessSessionId ||
         !chat.pendingHarnessSessionId ||
-        this.ignoredPendingIds.has(chat.pendingHarnessSessionId)
+        this.ignoredPendingIds.has(chat.pendingHarnessSessionId) ||
+        this.expiredChatIds.has(chat.id)
       ) {
         continue;
       }
@@ -131,8 +138,9 @@ export abstract class ExactIdSessionWatcher implements HarnessSessionWatcher {
         window = { since: now, worktreePath: catalogPaths.get(chat.worktreeId) };
         this.pending.set(chat.id, window);
       }
-      if (chat.status !== 'active' && now - window.since >= PENDING_TTL_MS) {
+      if (this.windowExpired(chat, window.since)) {
         this.pending.delete(chat.id);
+        this.expiredChatIds.add(chat.id);
         continue;
       }
       pending.push(chat);
@@ -154,8 +162,20 @@ export abstract class ExactIdSessionWatcher implements HarnessSessionWatcher {
         this.pending.delete(chatId);
       }
     }
+    // Keep the expiry marker only while its chat exists.
+    const chatIds = new Set(chats.map((chat) => chat.id));
+    for (const chatId of this.expiredChatIds) {
+      if (!chatIds.has(chatId)) {
+        this.expiredChatIds.delete(chatId);
+      }
+    }
 
     return pending;
+  }
+
+  /** A closed chat whose chosen ID never produced a record stops waiting. */
+  private windowExpired(chat: ChatSession, since: number): boolean {
+    return chat.status !== 'active' && Date.now() - since >= PENDING_TTL_MS;
   }
 
   /** Worktree paths by ID, when the harness was given the catalog. */
@@ -208,6 +228,15 @@ export abstract class ExactIdSessionWatcher implements HarnessSessionWatcher {
             this.pending.get(chat.id)?.worktreePath
           ))
         ) {
+          continue;
+        }
+        // The window is checked again after the await: it may have expired
+        // while the record was being read, and an expired window never links.
+        const window = this.pending.get(chat.id);
+        if (!window || this.windowExpired(chat, window.since)) {
+          this.pending.delete(chat.id);
+          this.pendingIds.delete(sessionId);
+          this.expiredChatIds.add(chat.id);
           continue;
         }
         this.linkSession(chat, sessionId, linked);
