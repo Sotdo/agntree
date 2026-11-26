@@ -465,11 +465,9 @@ export async function activate(context: vscode.ExtensionContext) {
   // VS Code's own UI must show up in the tree without a reload.
   context.subscriptions.push(
     vscode.workspace.onDidChangeWorkspaceFolders(() => {
-      void managedWorkspace.load().catch((error: unknown) => {
-        logOperation(
-          `Could not reread the managed workspace: ${error instanceof Error ? error.message : String(error)}`
-        );
-      });
+      // The window already reflects the change; rereading the file here would
+      // race VS Code's save and could restore the previous folder order.
+      managedWorkspace.syncFromWindow();
       refreshTree();
     })
   );

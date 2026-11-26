@@ -55,6 +55,21 @@ export class ManagedWorkspaceService {
 
   async load(): Promise<void> {
     this.folders = await this.readFolders();
+    this.syncFromWindow();
+  }
+
+  /**
+   * While the managed workspace is open, the window is the source of truth:
+   * VS Code saves the file after it applies a folder change, so a read right
+   * after the change event can still return the previous order.
+   */
+  syncFromWindow(): void {
+    if (!this.isOpen()) {
+      return;
+    }
+    this.folders = (vscode.workspace.workspaceFolders ?? []).map((folder) =>
+      canonicalPath(folder.uri.fsPath)
+    );
   }
 
   /** Offer the managed workspace once, then leave the command in the menu. */

@@ -23,7 +23,9 @@ writer: Add, Remove, and Focus update the window and let VS Code save the config
 its own form (relative paths, folder names). Agntree writes the file directly only when the
 workspace is not the open one — first creation, or a Project added from a window that is not
 the managed workspace. A refused folder update reverts the in-memory list, reports the error,
-and leaves the file alone.
+and leaves the file alone. While open, the window is also the source of truth for the folder
+order: the folder-change handler syncs the list from the window, never by rereading a file
+VS Code has not saved yet.
 
 ## Consequences
 

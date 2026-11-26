@@ -147,3 +147,14 @@ test('a malformed workspace file is refused, never overwritten', async (t) => {
   await assert.rejects(reread.load());
   assert.equal(fs.readFileSync(file, 'utf8'), partial);
 });
+
+test('while the workspace is open, a reload takes the window order, not the file', async (t) => {
+  const { service, folder, openWindow } = setup(t);
+  const app = folder('app');
+  const feature = folder('app-feature');
+  await service.add([app, feature]);
+  openWindow(feature, app);
+
+  await service.load();
+  assert.deepEqual([...service.folderPaths], [feature, app], 'the window wins over a file VS Code has not saved yet');
+});
